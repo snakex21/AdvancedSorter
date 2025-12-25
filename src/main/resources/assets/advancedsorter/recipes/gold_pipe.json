@@ -1,0 +1,20 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "GGG",
+        "GLG",
+        "GGG"
+    ],
+    "key": {
+        "G": {
+            "item": "minecraft:gold_ingot"
+        },
+        "L": {
+            "item": "minecraft:glass"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:gold_pipe",
+        "count": 8
+    }
+}
