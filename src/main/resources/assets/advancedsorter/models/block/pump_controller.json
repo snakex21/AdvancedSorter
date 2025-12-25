@@ -1,0 +1,6 @@
+{
+    "parent": "block/cube_all",
+    "textures": {
+        "all": "advancedsorter:blocks/fluid_pipes/pump_controller/pump_controller"
+    }
+}

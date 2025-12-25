@@ -1,0 +1,62 @@
+{
+    "multipart": [
+        {
+            "apply": {
+                "model": "advancedsorter:iron_pipe_core"
+            }
+        },
+        {
+            "when": {
+                "north": "true"
+            },
+            "apply": {
+                "model": "advancedsorter:iron_pipe_arm"
+            }
+        },
+        {
+            "when": {
+                "south": "true"
+            },
+            "apply": {
+                "model": "advancedsorter:iron_pipe_arm",
+                "y": 180
+            }
+        },
+        {
+            "when": {
+                "east": "true"
+            },
+            "apply": {
+                "model": "advancedsorter:iron_pipe_arm",
+                "y": 90
+            }
+        },
+        {
+            "when": {
+                "west": "true"
+            },
+            "apply": {
+                "model": "advancedsorter:iron_pipe_arm",
+                "y": 270
+            }
+        },
+        {
+            "when": {
+                "up": "true"
+            },
+            "apply": {
+                "model": "advancedsorter:iron_pipe_arm",
+                "x": 270
+            }
+        },
+        {
+            "when": {
+                "down": "true"
+            },
+            "apply": {
+                "model": "advancedsorter:iron_pipe_arm",
+                "x": 90
+            }
+        }
+    ]
+}
