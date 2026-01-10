@@ -41,7 +41,12 @@ public class PacketUpdateRules implements IMessage {
     @Override
     public void fromBytes(ByteBuf buf) {
         pos = BlockPos.fromLong(buf.readLong());
-        rulesTag = ByteBufUtils.readTag(buf).getTagList("Rules", Constants.NBT.TAG_COMPOUND);
+        NBTTagCompound tag = ByteBufUtils.readTag(buf);
+        if (tag != null && tag.hasKey("Rules")) {
+            rulesTag = tag.getTagList("Rules", Constants.NBT.TAG_COMPOUND);
+        } else {
+            rulesTag = new NBTTagList();
+        }
         defaultSideIndex = buf.readInt();
     }
 

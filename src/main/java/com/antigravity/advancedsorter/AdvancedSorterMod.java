@@ -28,6 +28,8 @@ public class AdvancedSorterMod {
     public static final int GUI_PUMP_CONTROLLER = 6;
     public static final int GUI_ADVANCED_PUMP = 7;
     public static final int GUI_CRAFTING_CALCULATOR = 8;
+    public static final int GUI_INVENTORY_INDEX = 9;
+    public static final int GUI_NETWORK_TOOL = 10;
 
     // Creative Tab
     public static final CreativeTabs CREATIVE_TAB = new CreativeTabs(MODID) {

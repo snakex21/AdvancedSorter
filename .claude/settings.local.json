@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew build:*)",
+      "Bash(tee:*)",
+      "Bash(gradlew build:*)",
+      "Bash(./gradlew.bat build)",
+      "Bash(mvn clean install)",
+      "Bash(dir:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\ASRock\\\\Desktop\\\\Advanced Sorter\"\"*.png 2>/dev/null || dir \"C:UsersASRockDesktopAdvanced Sorter*.png\" 2>/dev/null || ls \"C:UsersASRockDesktopAdvanced Sorter/ \")",
+      "Bash(Get-ChildItem:*)",
+      "Bash(Select-Object:*)",
+      "Bash(./gradlew clean build)"
+    ]
+  }
+}

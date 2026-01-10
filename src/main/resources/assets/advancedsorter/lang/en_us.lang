@@ -43,3 +43,10 @@ gui.advanced_pump.redstone=Redstone:
 gui.advanced_pump.redstone.ignore=Ignore
 gui.advanced_pump.redstone.signal=Signal
 gui.advanced_pump.redstone.no_signal=No Signal
+
+tile.inventory_index.name=Inventory Indexer
+item.network_tool.name=Network Tool
+gui.search=Search...
+gui.inventory_index.title=Inventory Index
+gui.inventory_index.nav=Navigation
+gui.inventory_index.get=Retrieval

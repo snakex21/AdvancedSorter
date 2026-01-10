@@ -1,0 +1,78 @@
+{
+    "parent": "block/block",
+    "textures": {
+        "side": "advancedsorter:blocks/transport_pipes/teleport_pipe/teleport_pipe",
+        "end": "advancedsorter:blocks/transport_pipes/teleport_pipe/teleport_pipe"
+    },
+    "elements": [
+        {
+            "name": "Arm",
+            "from": [
+                4,
+                4,
+                0
+            ],
+            "to": [
+                12,
+                12,
+                4
+            ],
+            "faces": {
+                "north": {
+                    "uv": [
+                        4,
+                        4,
+                        12,
+                        12
+                    ],
+                    "texture": "#end"
+                },
+                "east": {
+                    "uv": [
+                        0,
+                        4,
+                        4,
+                        12
+                    ],
+                    "texture": "#side"
+                },
+                "south": {
+                    "uv": [
+                        4,
+                        4,
+                        12,
+                        12
+                    ],
+                    "texture": "#side"
+                },
+                "west": {
+                    "uv": [
+                        0,
+                        4,
+                        4,
+                        12
+                    ],
+                    "texture": "#side"
+                },
+                "up": {
+                    "uv": [
+                        4,
+                        0,
+                        12,
+                        4
+                    ],
+                    "texture": "#side"
+                },
+                "down": {
+                    "uv": [
+                        4,
+                        0,
+                        12,
+                        4
+                    ],
+                    "texture": "#side"
+                }
+            }
+        }
+    ]
+}
