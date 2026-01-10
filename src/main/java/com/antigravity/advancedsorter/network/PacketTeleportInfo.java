@@ -1,6 +1,7 @@
 package com.antigravity.advancedsorter.network;
 
 import com.antigravity.advancedsorter.pipes.fluid.teleport.GuiTeleportFluidPipe;
+import com.antigravity.advancedsorter.pipes.gas.teleport.GuiTeleportGasPipe;
 import com.antigravity.advancedsorter.pipes.teleport.GuiTeleportPipe;
 import com.antigravity.advancedsorter.util.TeleportRegistry;
 import io.netty.buffer.ByteBuf;
@@ -60,6 +61,8 @@ public class PacketTeleportInfo implements IMessage {
                     ((GuiTeleportPipe) gui).updateConnectionInfo(message.locations);
                 } else if (gui instanceof GuiTeleportFluidPipe) {
                     ((GuiTeleportFluidPipe) gui).updateConnectionInfo(message.locations);
+                } else if (gui instanceof GuiTeleportGasPipe) {
+                    ((GuiTeleportGasPipe) gui).updateConnectionInfo(message.locations);
                 }
             });
             return null;

@@ -2,6 +2,7 @@ package com.antigravity.advancedsorter.pipes;
 
 import com.antigravity.advancedsorter.AdvancedSorterMod;
 import com.antigravity.advancedsorter.pipes.fluid.TileFluidPipe;
+import com.antigravity.advancedsorter.pipes.gas.teleport.TileTeleportGasPipe;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
@@ -36,6 +37,9 @@ public class ItemWrench extends Item {
                 return EnumActionResult.SUCCESS;
             } else if (te instanceof TileFluidPipe) {
                 ((TileFluidPipe) te).toggleConnection(facing);
+                return EnumActionResult.SUCCESS;
+            } else if (te instanceof TileTeleportGasPipe) {
+                ((TileTeleportGasPipe) te).toggleConnection(facing);
                 return EnumActionResult.SUCCESS;
             }
         }

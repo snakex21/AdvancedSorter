@@ -1,0 +1,11 @@
+{
+    "type": "minecraft:crafting_shapeless",
+    "ingredients": [
+        {
+            "item": "advancedsorter:teleport_fluid_pipe"
+        }
+    ],
+    "result": {
+        "item": "advancedsorter:teleport_gas_pipe"
+    }
+}

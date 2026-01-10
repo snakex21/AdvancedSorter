@@ -12,7 +12,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.apache.logging.log4j.Logger;
 
-@Mod(modid = AdvancedSorterMod.MODID, name = AdvancedSorterMod.NAME, version = AdvancedSorterMod.VERSION)
+@Mod(modid = AdvancedSorterMod.MODID, name = AdvancedSorterMod.NAME, version = AdvancedSorterMod.VERSION, dependencies = "after:mekanism")
 public class AdvancedSorterMod {
     public static final String MODID = "advancedsorter";
     public static final String NAME = "Advanced Sorter";
@@ -30,6 +30,7 @@ public class AdvancedSorterMod {
     public static final int GUI_CRAFTING_CALCULATOR = 8;
     public static final int GUI_INVENTORY_INDEX = 9;
     public static final int GUI_NETWORK_TOOL = 10;
+    public static final int GUI_TELEPORT_GAS_PIPE = 11;
 
     // Creative Tab
     public static final CreativeTabs CREATIVE_TAB = new CreativeTabs(MODID) {

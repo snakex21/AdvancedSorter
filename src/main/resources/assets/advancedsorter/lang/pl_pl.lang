@@ -15,6 +15,7 @@ tile.gold_fluid_pipe.name=Złota rura do płynów
 tile.diamond_fluid_pipe.name=Diamentowa rura do płynów
 tile.directional_fluid_pipe.name=Kierunkowa rura do płynów
 tile.teleport_fluid_pipe.name=Teleportacyjna rura do płynów
+tile.teleport_gas_pipe.name=Teleportacyjna rura do gazu
 tile.extraction_fluid_pipe.name=Wydobywcza rura do płynów
 tile.pump_controller.name=Kontroler pompy
 tile.advanced_pump.name=Zaawansowana pompa

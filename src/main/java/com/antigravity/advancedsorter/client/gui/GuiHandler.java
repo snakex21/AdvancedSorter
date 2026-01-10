@@ -14,6 +14,9 @@ import com.antigravity.advancedsorter.pipes.fluid.directional.TileDirectionalFlu
 import com.antigravity.advancedsorter.pipes.fluid.teleport.ContainerTeleportFluidPipe;
 import com.antigravity.advancedsorter.pipes.fluid.teleport.GuiTeleportFluidPipe;
 import com.antigravity.advancedsorter.pipes.fluid.teleport.TileTeleportFluidPipe;
+import com.antigravity.advancedsorter.pipes.gas.teleport.ContainerTeleportGasPipe;
+import com.antigravity.advancedsorter.pipes.gas.teleport.GuiTeleportGasPipe;
+import com.antigravity.advancedsorter.pipes.gas.teleport.TileTeleportGasPipe;
 import com.antigravity.advancedsorter.pipes.fluid.extraction.ContainerExtractionFluidPipe;
 import com.antigravity.advancedsorter.pipes.fluid.extraction.GuiExtractionFluidPipe;
 import com.antigravity.advancedsorter.pipes.fluid.extraction.TileExtractionFluidPipe;
@@ -98,6 +101,12 @@ public class GuiHandler implements IGuiHandler {
             }
         }
 
+        if (ID == AdvancedSorterMod.GUI_TELEPORT_GAS_PIPE) {
+            if (tile instanceof TileTeleportGasPipe) {
+                return new ContainerTeleportGasPipe(player.inventory, (TileTeleportGasPipe) tile);
+            }
+        }
+
         return null;
     }
 
@@ -168,6 +177,12 @@ public class GuiHandler implements IGuiHandler {
 
         if (ID == AdvancedSorterMod.GUI_NETWORK_TOOL) {
             return new GuiNetworkTool(player);
+        }
+
+        if (ID == AdvancedSorterMod.GUI_TELEPORT_GAS_PIPE) {
+            if (tile instanceof TileTeleportGasPipe) {
+                return new GuiTeleportGasPipe(player.inventory, (TileTeleportGasPipe) tile);
+            }
         }
 
         return null;

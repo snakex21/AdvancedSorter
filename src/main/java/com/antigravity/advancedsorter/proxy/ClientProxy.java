@@ -14,6 +14,8 @@ import com.antigravity.advancedsorter.pipes.transport.TileStonePipe;
 import com.antigravity.advancedsorter.pipes.teleport.TileTeleportPipe;
 import com.antigravity.advancedsorter.pipes.fluid.TileFluidPipe;
 import com.antigravity.advancedsorter.client.render.TileFluidPipeRenderer;
+import com.antigravity.advancedsorter.pipes.gas.teleport.TileTeleportGasPipe;
+import com.antigravity.advancedsorter.client.render.TileTeleportGasPipeRenderer;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.client.model.ModelLoader;
@@ -61,6 +63,9 @@ public class ClientProxy extends CommonProxy {
         ClientRegistry.bindTileEntitySpecialRenderer(
                 com.antigravity.advancedsorter.pipes.fluid.teleport.TileTeleportFluidPipe.class,
                 new TileFluidPipeRenderer());
+
+        // Gas pipe renderer
+        ClientRegistry.bindTileEntitySpecialRenderer(TileTeleportGasPipe.class, new TileTeleportGasPipeRenderer());
 
         // Register Keybinds
         KeyInputHandler.register();
@@ -198,6 +203,11 @@ public class ClientProxy extends CommonProxy {
             ModelLoader.setCustomModelResourceLocation(
                     Item.getItemFromBlock(CommonProxy.FLUID_OUTLET), 0,
                     new ModelResourceLocation(CommonProxy.FLUID_OUTLET.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.TELEPORT_GAS_PIPE != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.TELEPORT_GAS_PIPE), 0,
+                    new ModelResourceLocation(CommonProxy.TELEPORT_GAS_PIPE.getRegistryName(), "inventory"));
         }
     }
 }

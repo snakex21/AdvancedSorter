@@ -24,6 +24,9 @@ public class PacketHandler {
                 INSTANCE.registerMessage(PacketUpdateTeleportFluidPipe.Handler.class,
                                 PacketUpdateTeleportFluidPipe.class,
                                 packetId++, Side.SERVER);
+                INSTANCE.registerMessage(PacketUpdateTeleportGasPipe.Handler.class,
+                                PacketUpdateTeleportGasPipe.class,
+                                packetId++, Side.SERVER);
                 INSTANCE.registerMessage(PacketTeleportInfo.Handler.class, PacketTeleportInfo.class, packetId++,
                                 Side.CLIENT);
                 INSTANCE.registerMessage(PacketRequestTeleportInfo.Handler.class, PacketRequestTeleportInfo.class,
