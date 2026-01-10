@@ -11,6 +11,8 @@
   "credits": "",
   "logoFile": "logo.png",
   "screenshots": [],
-  "dependencies": []
+  "useDependencyInformation": true,
+  "dependencies": ["mekanism"],
+  "requiredMods": ["mekanism"]
 }
 ]

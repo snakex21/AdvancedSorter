@@ -21,6 +21,8 @@ import com.antigravity.advancedsorter.pipes.fluid.teleport.BlockTeleportFluidPip
 import com.antigravity.advancedsorter.pipes.fluid.teleport.TileTeleportFluidPipe;
 import com.antigravity.advancedsorter.pipes.fluid.extraction.BlockExtractionFluidPipe;
 import com.antigravity.advancedsorter.pipes.fluid.extraction.TileExtractionFluidPipe;
+import com.antigravity.advancedsorter.pipes.gas.teleport.BlockTeleportGasPipe;
+import com.antigravity.advancedsorter.pipes.gas.teleport.TileTeleportGasPipe;
 import com.antigravity.advancedsorter.pump.BlockPumpController;
 import com.antigravity.advancedsorter.pump.TilePumpController;
 import com.antigravity.advancedsorter.pump.BlockAdvancedPump;
@@ -72,6 +74,7 @@ public class CommonProxy {
         public static BlockDirectionalFluidPipe DIRECTIONAL_FLUID_PIPE;
         public static BlockTeleportFluidPipe TELEPORT_FLUID_PIPE;
         public static BlockExtractionFluidPipe EXTRACTION_FLUID_PIPE;
+        public static BlockTeleportGasPipe TELEPORT_GAS_PIPE;
         public static BlockAdvancedPump ADVANCED_PUMP;
         public static BlockFluidOutlet FLUID_OUTLET;
 
@@ -184,6 +187,12 @@ public class CommonProxy {
                 GameRegistry.registerTileEntity(TileExtractionFluidPipe.class,
                                 new ResourceLocation(AdvancedSorterMod.MODID, "tile_extraction_fluid_pipe"));
 
+                // Teleport Gas Pipe (Mekanism)
+                TELEPORT_GAS_PIPE = new BlockTeleportGasPipe();
+                event.getRegistry().register(TELEPORT_GAS_PIPE);
+                GameRegistry.registerTileEntity(TileTeleportGasPipe.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_teleport_gas_pipe"));
+
                 // Pump Controller
                 PUMP_CONTROLLER = new BlockPumpController();
                 event.getRegistry().register(PUMP_CONTROLLER);
@@ -254,6 +263,8 @@ public class CommonProxy {
                                 .setRegistryName(TELEPORT_FLUID_PIPE.getRegistryName()));
                 event.getRegistry().register(new ItemBlock(EXTRACTION_FLUID_PIPE)
                                 .setRegistryName(EXTRACTION_FLUID_PIPE.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(TELEPORT_GAS_PIPE)
+                                .setRegistryName(TELEPORT_GAS_PIPE.getRegistryName()));
                 event.getRegistry().register(new ItemBlock(PUMP_CONTROLLER)
                                 .setRegistryName(PUMP_CONTROLLER.getRegistryName()));
                 event.getRegistry().register(new ItemBlock(ADVANCED_PUMP)

@@ -1,6 +1,7 @@
 package com.antigravity.advancedsorter.network;
 
 import com.antigravity.advancedsorter.pipes.fluid.teleport.TileTeleportFluidPipe;
+import com.antigravity.advancedsorter.pipes.gas.teleport.TileTeleportGasPipe;
 import com.antigravity.advancedsorter.pipes.teleport.TileTeleportPipe;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.tileentity.TileEntity;
@@ -40,6 +41,8 @@ public class PacketRequestTeleportInfo implements IMessage {
                     ((TileTeleportPipe) te).syncConnectionInfo();
                 } else if (te instanceof TileTeleportFluidPipe) {
                     ((TileTeleportFluidPipe) te).syncConnectionInfo();
+                } else if (te instanceof TileTeleportGasPipe) {
+                    ((TileTeleportGasPipe) te).syncConnectionInfo();
                 }
             });
             return null;

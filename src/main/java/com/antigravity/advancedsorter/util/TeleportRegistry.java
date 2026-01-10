@@ -20,6 +20,7 @@ public class TeleportRegistry extends WorldSavedData {
     // Frequency -> List of pipe locations
     private final Map<Integer, List<TeleportLocation>> pipesByFrequency = new HashMap<>();
     private final Map<Integer, List<TeleportLocation>> fluidPipesByFrequency = new HashMap<>();
+    private final Map<Integer, List<TeleportLocation>> gasPipesByFrequency = new HashMap<>();
 
     public TeleportRegistry() {
         super(DATA_NAME);
@@ -139,6 +140,59 @@ public class TeleportRegistry extends WorldSavedData {
         return fluidPipesByFrequency.getOrDefault(frequency, Collections.emptyList());
     }
 
+    // ========== Gas Pipe Methods ==========
+
+    public void registerGasPipe(int frequency, int dimension, BlockPos pos, boolean canSend, boolean canReceive) {
+        removeGasPipe(pos, dimension);
+
+        gasPipesByFrequency.computeIfAbsent(frequency, k -> new ArrayList<>())
+                .add(new TeleportLocation(dimension, pos, canSend, canReceive));
+        markDirty();
+    }
+
+    public void removeGasPipe(BlockPos pos, int dimension) {
+        for (List<TeleportLocation> locations : gasPipesByFrequency.values()) {
+            locations.removeIf(loc -> loc.pos.equals(pos) && loc.dimension == dimension);
+        }
+        markDirty();
+    }
+
+    public List<TeleportLocation> getGasReceivers(int frequency) {
+        List<TeleportLocation> all = gasPipesByFrequency.get(frequency);
+        if (all == null)
+            return Collections.emptyList();
+
+        List<TeleportLocation> receivers = new ArrayList<>();
+        for (TeleportLocation loc : all) {
+            if (loc.canReceive) {
+                receivers.add(loc);
+            }
+        }
+        return receivers;
+    }
+
+    public List<TeleportLocation> getGasSenders(int frequency) {
+        List<TeleportLocation> all = gasPipesByFrequency.get(frequency);
+        if (all == null)
+            return Collections.emptyList();
+
+        List<TeleportLocation> senders = new ArrayList<>();
+        for (TeleportLocation loc : all) {
+            if (loc.canSend) {
+                senders.add(loc);
+            }
+        }
+        return senders;
+    }
+
+    public Set<Integer> getGasFrequencies() {
+        return gasPipesByFrequency.keySet();
+    }
+
+    public List<TeleportLocation> getGasPipesByFrequency(int frequency) {
+        return gasPipesByFrequency.getOrDefault(frequency, Collections.emptyList());
+    }
+
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         pipesByFrequency.clear();
@@ -165,6 +219,19 @@ public class TeleportRegistry extends WorldSavedData {
                 locs.add(TeleportLocation.fromNBT(locsList.getCompoundTagAt(j)));
             }
             fluidPipesByFrequency.put(freq, locs);
+        }
+
+        gasPipesByFrequency.clear();
+        NBTTagList gasList = nbt.getTagList("GasFrequencies", Constants.NBT.TAG_COMPOUND);
+        for (int i = 0; i < gasList.tagCount(); i++) {
+            NBTTagCompound freqTag = gasList.getCompoundTagAt(i);
+            int freq = freqTag.getInteger("Freq");
+            NBTTagList locsList = freqTag.getTagList("Locs", Constants.NBT.TAG_COMPOUND);
+            List<TeleportLocation> locs = new ArrayList<>();
+            for (int j = 0; j < locsList.tagCount(); j++) {
+                locs.add(TeleportLocation.fromNBT(locsList.getCompoundTagAt(j)));
+            }
+            gasPipesByFrequency.put(freq, locs);
         }
     }
 
@@ -195,6 +262,19 @@ public class TeleportRegistry extends WorldSavedData {
             fluidList.appendTag(freqTag);
         }
         nbt.setTag("FluidFrequencies", fluidList);
+
+        NBTTagList gasList = new NBTTagList();
+        for (Map.Entry<Integer, List<TeleportLocation>> entry : gasPipesByFrequency.entrySet()) {
+            NBTTagCompound freqTag = new NBTTagCompound();
+            freqTag.setInteger("Freq", entry.getKey());
+            NBTTagList locsList = new NBTTagList();
+            for (TeleportLocation loc : entry.getValue()) {
+                locsList.appendTag(loc.toNBT());
+            }
+            freqTag.setTag("Locs", locsList);
+            gasList.appendTag(freqTag);
+        }
+        nbt.setTag("GasFrequencies", gasList);
 
         return nbt;
     }

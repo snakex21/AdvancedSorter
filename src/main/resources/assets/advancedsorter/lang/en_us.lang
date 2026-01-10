@@ -15,6 +15,7 @@ tile.gold_fluid_pipe.name=Gold Fluid Pipe
 tile.diamond_fluid_pipe.name=Diamond Fluid Pipe
 tile.directional_fluid_pipe.name=Directional Fluid Pipe
 tile.teleport_fluid_pipe.name=Teleport Fluid Pipe
+tile.teleport_gas_pipe.name=Teleport Gas Pipe
 tile.extraction_fluid_pipe.name=Extraction Fluid Pipe
 tile.pump_controller.name=Pump Controller
 tile.advanced_pump.name=Advanced Pump

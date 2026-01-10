@@ -2,6 +2,7 @@ buildscript {
     repositories {
         mavenCentral()
         maven { url = "https://maven.minecraftforge.net/" }
+        maven { url = "https://cursemaven.com" }
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
@@ -21,7 +22,13 @@ minecraft {
     mappings = "snapshot_20171003"
 }
 
+repositories {
+    maven { url = "https://cursemaven.com" }
+}
+
 dependencies {
+    // Mekanism API for gas pipes
+    deobfCompile "curse.maven:mekanism-268560:2835175"
 }
 
 processResources {
