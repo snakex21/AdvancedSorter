@@ -1,6 +1,0 @@
-{
-    "parent": "block/cube_all",
-    "textures": {
-        "all": "advancedsorter:blocks/transport_pipes/extraction_pipes/iron_extractor/iron_extractor_side"
-    }
-}

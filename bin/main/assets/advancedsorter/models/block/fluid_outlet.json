@@ -1,8 +1,0 @@
-{
-    "parent": "block/orientable",
-    "textures": {
-        "top": "advancedsorter:blocks/fluid_pipes/fluid_outlet/fluid_outlet_top",
-        "side": "advancedsorter:blocks/fluid_pipes/fluid_outlet/fluid_outlet_side",
-        "front": "advancedsorter:blocks/fluid_pipes/fluid_outlet/fluid_outlet_front"
-    }
-}
