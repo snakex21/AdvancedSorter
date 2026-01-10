@@ -1,8 +1,0 @@
-{
-    "parent": "block/cube_bottom_top",
-    "textures": {
-        "top": "advancedsorter:blocks/fluid_pipes/advanced_pump/advanced_pump_top",
-        "bottom": "advancedsorter:blocks/fluid_pipes/advanced_pump/advanced_pump_bottom",
-        "side": "advancedsorter:blocks/fluid_pipes/advanced_pump/advanced_pump_side"
-    }
-}
