@@ -18,15 +18,26 @@ public class RuleSerializer {
         tag.setInteger("Output", rule.outputFace.getIndex());
         tag.setBoolean("Enabled", rule.enabled);
 
+        // Optimized ItemStack serialization - only save registry name
         NBTTagList exactList = new NBTTagList();
         for (ItemStack stack : rule.exactItems) {
-            exactList.appendTag(stack.serializeNBT());
+            if (!stack.isEmpty()) {
+                NBTTagCompound itemTag = new NBTTagCompound();
+                itemTag.setString("id", stack.getItem().getRegistryName().toString());
+                itemTag.setInteger("meta", stack.getMetadata());
+                exactList.appendTag(itemTag);
+            }
         }
         tag.setTag("ExactItems", exactList);
 
         NBTTagList exceptionList = new NBTTagList();
         for (ItemStack stack : rule.exceptionItems) {
-            exceptionList.appendTag(stack.serializeNBT());
+            if (!stack.isEmpty()) {
+                NBTTagCompound itemTag = new NBTTagCompound();
+                itemTag.setString("id", stack.getItem().getRegistryName().toString());
+                itemTag.setInteger("meta", stack.getMetadata());
+                exceptionList.appendTag(itemTag);
+            }
         }
         tag.setTag("ExceptionItems", exceptionList);
 
@@ -50,14 +61,46 @@ public class RuleSerializer {
         if (tag.hasKey("ExactItems")) {
             NBTTagList list = tag.getTagList("ExactItems", Constants.NBT.TAG_COMPOUND);
             for (int i = 0; i < list.tagCount(); i++) {
-                rule.exactItems.add(new ItemStack(list.getCompoundTagAt(i)));
+                NBTTagCompound itemTag = list.getCompoundTagAt(i);
+                ItemStack stack = ItemStack.EMPTY;
+
+                // Compatibility: handle old format (full NBT) and new format (registry id)
+                if (itemTag.hasKey("id", Constants.NBT.TAG_STRING)) {
+                    net.minecraft.item.Item item = net.minecraft.item.Item.getByNameOrId(itemTag.getString("id"));
+                    if (item != null) {
+                        int meta = itemTag.getInteger("meta");
+                        stack = new ItemStack(item, 1, meta);
+                    }
+                } else {
+                    stack = new ItemStack(itemTag);
+                }
+
+                if (!stack.isEmpty()) {
+                    rule.exactItems.add(stack);
+                }
             }
         }
 
         if (tag.hasKey("ExceptionItems")) {
             NBTTagList list = tag.getTagList("ExceptionItems", Constants.NBT.TAG_COMPOUND);
             for (int i = 0; i < list.tagCount(); i++) {
-                rule.exceptionItems.add(new ItemStack(list.getCompoundTagAt(i)));
+                NBTTagCompound itemTag = list.getCompoundTagAt(i);
+                ItemStack stack = ItemStack.EMPTY;
+
+                // Compatibility: handle old format (full NBT) and new format (registry id)
+                if (itemTag.hasKey("id", Constants.NBT.TAG_STRING)) {
+                    net.minecraft.item.Item item = net.minecraft.item.Item.getByNameOrId(itemTag.getString("id"));
+                    if (item != null) {
+                        int meta = itemTag.getInteger("meta");
+                        stack = new ItemStack(item, 1, meta);
+                    }
+                } else {
+                    stack = new ItemStack(itemTag);
+                }
+
+                if (!stack.isEmpty()) {
+                    rule.exceptionItems.add(stack);
+                }
             }
         }
 

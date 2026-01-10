@@ -27,6 +27,9 @@ import com.antigravity.advancedsorter.pump.BlockAdvancedPump;
 import com.antigravity.advancedsorter.pump.TileAdvancedPump;
 import com.antigravity.advancedsorter.pipes.fluid.BlockFluidOutlet;
 import com.antigravity.advancedsorter.pipes.fluid.TileFluidOutlet;
+import com.antigravity.advancedsorter.blocks.BlockInventoryIndex;
+import com.antigravity.advancedsorter.tiles.TileInventoryIndex;
+import com.antigravity.advancedsorter.blocks.ItemNetworkTool;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
@@ -74,6 +77,10 @@ public class CommonProxy {
 
         // Pump Controller
         public static BlockPumpController PUMP_CONTROLLER;
+
+        // Inventory Indexer
+        public static BlockInventoryIndex INVENTORY_INDEX;
+        public static ItemNetworkTool NETWORK_TOOL;
 
         public void preInit(FMLPreInitializationEvent event) {
         }
@@ -194,6 +201,12 @@ public class CommonProxy {
                 event.getRegistry().register(FLUID_OUTLET);
                 GameRegistry.registerTileEntity(TileFluidOutlet.class,
                                 new ResourceLocation(AdvancedSorterMod.MODID, "tile_fluid_outlet"));
+
+                // Inventory Indexer
+                INVENTORY_INDEX = new BlockInventoryIndex();
+                event.getRegistry().register(INVENTORY_INDEX);
+                GameRegistry.registerTileEntity(TileInventoryIndex.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_inventory_index"));
         }
 
         @SubscribeEvent
@@ -247,5 +260,12 @@ public class CommonProxy {
                                 .setRegistryName(ADVANCED_PUMP.getRegistryName()));
                 event.getRegistry().register(new ItemBlock(FLUID_OUTLET)
                                 .setRegistryName(FLUID_OUTLET.getRegistryName()));
+
+                // Indexer Items
+                event.getRegistry().register(new ItemBlock(INVENTORY_INDEX)
+                                .setRegistryName(INVENTORY_INDEX.getRegistryName()));
+
+                NETWORK_TOOL = new ItemNetworkTool();
+                event.getRegistry().register(NETWORK_TOOL);
         }
 }

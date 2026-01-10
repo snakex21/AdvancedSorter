@@ -23,6 +23,10 @@ import com.antigravity.advancedsorter.pump.TilePumpController;
 import com.antigravity.advancedsorter.pump.ContainerAdvancedPump;
 import com.antigravity.advancedsorter.pump.GuiAdvancedPump;
 import com.antigravity.advancedsorter.pump.TileAdvancedPump;
+import com.antigravity.advancedsorter.pump.TileAdvancedPump;
+import com.antigravity.advancedsorter.container.ContainerInventoryIndex;
+import com.antigravity.advancedsorter.client.gui.GuiInventoryIndex;
+import com.antigravity.advancedsorter.tiles.TileInventoryIndex;
 import com.antigravity.advancedsorter.tiles.TileAdvancedSorter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
@@ -88,6 +92,12 @@ public class GuiHandler implements IGuiHandler {
             }
         }
 
+        if (ID == AdvancedSorterMod.GUI_INVENTORY_INDEX) {
+            if (tile instanceof TileInventoryIndex) {
+                return new ContainerInventoryIndex(player.inventory, (TileInventoryIndex) tile);
+            }
+        }
+
         return null;
     }
 
@@ -145,8 +155,19 @@ public class GuiHandler implements IGuiHandler {
             }
         }
 
+        if (ID == AdvancedSorterMod.GUI_INVENTORY_INDEX) {
+            if (tile instanceof TileInventoryIndex) {
+                return new GuiInventoryIndex(new ContainerInventoryIndex(player.inventory, (TileInventoryIndex) tile),
+                        (TileInventoryIndex) tile);
+            }
+        }
+
         if (ID == AdvancedSorterMod.GUI_CRAFTING_CALCULATOR) {
             return new com.antigravity.advancedsorter.client.gui.GuiCraftingCalculator(null);
+        }
+
+        if (ID == AdvancedSorterMod.GUI_NETWORK_TOOL) {
+            return new GuiNetworkTool(player);
         }
 
         return null;

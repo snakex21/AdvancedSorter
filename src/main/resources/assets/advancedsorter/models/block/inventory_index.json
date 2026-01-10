@@ -1,0 +1,12 @@
+{
+    "parent": "block/cube",
+    "textures": {
+        "particle": "advancedsorter:blocks/inventory_index/inventory_index_side",
+        "down": "advancedsorter:blocks/inventory_index/inventory_index_side",
+        "up": "advancedsorter:blocks/inventory_index/inventory_index_side",
+        "north": "advancedsorter:blocks/inventory_index/inventory_index_front",
+        "south": "advancedsorter:blocks/inventory_index/inventory_index_side",
+        "east": "advancedsorter:blocks/inventory_index/inventory_index_side",
+        "west": "advancedsorter:blocks/inventory_index/inventory_index_side"
+    }
+}

@@ -35,5 +35,15 @@ public class PacketHandler {
                                 packetId++, Side.SERVER);
                 INSTANCE.registerMessage(PacketUpdateAdvancedPump.Handler.class, PacketUpdateAdvancedPump.class,
                                 packetId++, Side.SERVER);
+                INSTANCE.registerMessage(PacketInventoryIndexSync.Handler.class, PacketInventoryIndexSync.class,
+                                packetId++, Side.CLIENT);
+                INSTANCE.registerMessage(PacketRequestItem.Handler.class, PacketRequestItem.class,
+                                packetId++, Side.SERVER);
+                INSTANCE.registerMessage(PacketManageChestGroup.Handler.class, PacketManageChestGroup.class,
+                                packetId++, Side.SERVER);
+                INSTANCE.registerMessage(PacketChestGroupSync.Handler.class, PacketChestGroupSync.class,
+                                packetId++, Side.CLIENT);
+                INSTANCE.registerMessage(PacketNetworkToolSync.Handler.class, PacketNetworkToolSync.class,
+                                packetId++, Side.CLIENT);
         }
 }

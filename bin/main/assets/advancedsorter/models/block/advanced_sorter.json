@@ -1,0 +1,11 @@
+{
+    "parent": "block/cube",
+    "textures": {
+        "down": "advancedsorter:blocks/transport_pipes/sorter/advanced_sorter_bottom",
+        "up": "advancedsorter:blocks/transport_pipes/sorter/advanced_sorter_top",
+        "north": "advancedsorter:blocks/transport_pipes/sorter/advanced_sorter_north",
+        "south": "advancedsorter:blocks/transport_pipes/sorter/advanced_sorter_south",
+        "east": "advancedsorter:blocks/transport_pipes/sorter/advanced_sorter_east",
+        "west": "advancedsorter:blocks/transport_pipes/sorter/advanced_sorter_west"
+    }
+}

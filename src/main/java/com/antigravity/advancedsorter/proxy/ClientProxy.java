@@ -75,6 +75,11 @@ public class ClientProxy extends CommonProxy {
                     Item.getItemFromBlock(CommonProxy.ADVANCED_SORTER), 0,
                     new ModelResourceLocation(CommonProxy.ADVANCED_SORTER.getRegistryName(), "inventory"));
         }
+        if (CommonProxy.INVENTORY_INDEX != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.INVENTORY_INDEX), 0,
+                    new ModelResourceLocation(CommonProxy.INVENTORY_INDEX.getRegistryName(), "inventory"));
+        }
 
         // Pipe and wrench models are registered via blockstate/model json inheritance
         // Transport pipes
@@ -125,6 +130,11 @@ public class ClientProxy extends CommonProxy {
             ModelLoader.setCustomModelResourceLocation(
                     CommonProxy.WRENCH, 0,
                     new ModelResourceLocation(CommonProxy.WRENCH.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.NETWORK_TOOL != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    CommonProxy.NETWORK_TOOL, 0,
+                    new ModelResourceLocation(CommonProxy.NETWORK_TOOL.getRegistryName(), "inventory"));
         }
 
         if (CommonProxy.DIRECTIONAL_PIPE != null) {
