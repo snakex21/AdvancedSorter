@@ -3,6 +3,7 @@ package com.antigravity.advancedsorter.blocks;
 import com.antigravity.advancedsorter.AdvancedSorterMod;
 import com.antigravity.advancedsorter.tiles.TileInventoryIndex;
 import com.antigravity.advancedsorter.tiles.ChestGroup;
+import com.antigravity.advancedsorter.autocrafter.TileAutoCrafter;
 import com.antigravity.advancedsorter.network.PacketHandler;
 import com.antigravity.advancedsorter.network.PacketChestGroupSync;
 import com.antigravity.advancedsorter.network.PacketNetworkToolSync;
@@ -182,6 +183,51 @@ public class ItemNetworkTool extends Item {
             return EnumActionResult.SUCCESS;
         }
 
+        // ========== CLICK ON AUTO CRAFTER ==========
+        if (tile instanceof TileAutoCrafter) {
+            TileAutoCrafter crafter = (TileAutoCrafter) tile;
+            BlockPos crafterCopySource = getCopySourceAutoCrafter(stack);
+
+            if (crafterCopySource != null) {
+                // We have a copy source - paste recipes
+                if (crafterCopySource.equals(pos)) {
+                    // Same crafter - cancel
+                    if (isSneaking) {
+                        clearCopySourceAutoCrafter(stack);
+                        player.sendMessage(new TextComponentString(
+                                "§cCancelled copy mode."));
+                    } else {
+                        player.sendMessage(new TextComponentString(
+                                "§eThis is the source Auto Crafter. Shift+Click to cancel."));
+                    }
+                } else {
+                    // Different crafter - paste
+                    TileEntity sourceTile = worldIn.getTileEntity(crafterCopySource);
+                    if (sourceTile instanceof TileAutoCrafter) {
+                        TileAutoCrafter sourceCrafter = (TileAutoCrafter) sourceTile;
+                        int recipeCount = sourceCrafter.getRecipes().size();
+                        crafter.copyRecipesFrom(sourceCrafter);
+                        player.sendMessage(new TextComponentString(
+                                "§aPasted " + recipeCount + " recipe(s) to Auto Crafter."));
+                    }
+                    clearCopySourceAutoCrafter(stack);
+                }
+            } else if (isSneaking) {
+                // Enter copy mode
+                setCopySourceAutoCrafter(stack, pos);
+                player.sendMessage(new TextComponentString(
+                        "§aCopied Auto Crafter §7(" + crafter.getRecipes().size() + " recipes)\n" +
+                        "§7Click another Auto Crafter to paste."));
+            } else {
+                // Just show info
+                player.sendMessage(new TextComponentString(
+                        "§7Auto Crafter at " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() +
+                        " §7(" + crafter.getRecipes().size() + " recipes)\n" +
+                        "§7Shift+Click to copy recipes."));
+            }
+            return EnumActionResult.SUCCESS;
+        }
+
         // ========== CLICK ON CHEST/INVENTORY ==========
         if (tile != null && tile.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null)) {
             if (isSneaking) {
@@ -353,6 +399,31 @@ public class ItemNetworkTool extends Item {
         NBTTagCompound tag = stack.getTagCompound();
         if (tag != null) {
             tag.removeTag("CopySourceIndexer");
+            stack.setTagCompound(tag);
+        }
+    }
+
+    // ========== COPY SOURCE AUTO CRAFTER (for copying recipes between crafters) ==========
+
+    public static BlockPos getCopySourceAutoCrafter(ItemStack stack) {
+        NBTTagCompound tag = stack.getTagCompound();
+        if (tag != null && tag.hasKey("CopySourceAutoCrafter")) {
+            return NBTUtil.getPosFromTag(tag.getCompoundTag("CopySourceAutoCrafter"));
+        }
+        return null;
+    }
+
+    public static void setCopySourceAutoCrafter(ItemStack stack, BlockPos pos) {
+        NBTTagCompound tag = stack.getTagCompound();
+        if (tag == null) tag = new NBTTagCompound();
+        tag.setTag("CopySourceAutoCrafter", NBTUtil.createPosTag(pos));
+        stack.setTagCompound(tag);
+    }
+
+    public static void clearCopySourceAutoCrafter(ItemStack stack) {
+        NBTTagCompound tag = stack.getTagCompound();
+        if (tag != null) {
+            tag.removeTag("CopySourceAutoCrafter");
             stack.setTagCompound(tag);
         }
     }

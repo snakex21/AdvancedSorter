@@ -1,0 +1,12 @@
+{
+    "parent": "block/cube",
+    "textures": {
+        "down": "advancedsorter:blocks/auto_crafter/auto_crafter_side",
+        "up": "advancedsorter:blocks/auto_crafter/auto_crafter_top",
+        "north": "advancedsorter:blocks/auto_crafter/auto_crafter_front",
+        "south": "advancedsorter:blocks/auto_crafter/auto_crafter_side",
+        "east": "advancedsorter:blocks/auto_crafter/auto_crafter_side",
+        "west": "advancedsorter:blocks/auto_crafter/auto_crafter_side",
+        "particle": "advancedsorter:blocks/auto_crafter/auto_crafter_front"
+    }
+}

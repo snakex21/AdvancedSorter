@@ -48,5 +48,11 @@ public class PacketHandler {
                                 packetId++, Side.CLIENT);
                 INSTANCE.registerMessage(PacketNetworkToolSync.Handler.class, PacketNetworkToolSync.class,
                                 packetId++, Side.CLIENT);
+
+                // Auto Crafter
+                INSTANCE.registerMessage(PacketAutoCrafterAction.Handler.class, PacketAutoCrafterAction.class,
+                                packetId++, Side.SERVER);
+                INSTANCE.registerMessage(PacketCopyAutoCrafterRecipes.Handler.class, PacketCopyAutoCrafterRecipes.class,
+                                packetId++, Side.SERVER);
         }
 }

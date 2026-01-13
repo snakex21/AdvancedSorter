@@ -1,0 +1,26 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "CRC",
+        "TBT",
+        "CRC"
+    ],
+    "key": {
+        "C": {
+            "item": "minecraft:cobblestone"
+        },
+        "R": {
+            "item": "minecraft:redstone"
+        },
+        "T": {
+            "item": "minecraft:crafting_table"
+        },
+        "B": {
+            "item": "minecraft:chest"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:auto_crafter",
+        "count": 1
+    }
+}

@@ -1,5 +1,8 @@
 {
     "variants": {
-        "normal": { "model": "advancedsorter:inventory_index" }
+        "facing=north": { "model": "advancedsorter:inventory_index" },
+        "facing=south": { "model": "advancedsorter:inventory_index", "y": 180 },
+        "facing=west":  { "model": "advancedsorter:inventory_index", "y": 270 },
+        "facing=east":  { "model": "advancedsorter:inventory_index", "y": 90 }
     }
 }
