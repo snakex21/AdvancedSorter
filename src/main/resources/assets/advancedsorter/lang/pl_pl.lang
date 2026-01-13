@@ -44,3 +44,26 @@ gui.advanced_pump.redstone=Redstone:
 gui.advanced_pump.redstone.ignore=Ignoruj
 gui.advanced_pump.redstone.signal=Sygnał
 gui.advanced_pump.redstone.no_signal=Brak
+
+tile.inventory_index.name=Indeks Inwentarzy
+item.network_tool.name=Narzedzie Sieciowe
+gui.search=Szukaj...
+gui.inventory_index.title=Indeks Inwentarzy
+gui.inventory_index.nav=Nawigacja
+gui.inventory_index.get=Pobieranie
+
+tile.advancedsorter.auto_crafter.name=Auto Crafter
+gui.auto_crafter.title=Auto Crafter
+gui.auto_crafter.tab.recipes=Receptury
+gui.auto_crafter.tab.craft=Craft
+gui.auto_crafter.tab.auto=Automatyzacja
+gui.auto_crafter.add_recipe=Dodaj
+gui.auto_crafter.remove_recipe=Usun
+gui.auto_crafter.clear_grid=Wyczysc
+gui.auto_crafter.craft_one=Zrob x1
+gui.auto_crafter.craft_stack=Zrob x64
+gui.auto_crafter.toggle_auto=Auto WL/WYL
+gui.auto_crafter.add_to_auto=+ Dodaj
+gui.auto_crafter.remove_from_auto=- Usun
+tooltip.advancedsorter.auto_crafter.desc=Automatyczny crafter z wlasnymi recepturami
+tooltip.advancedsorter.auto_crafter.details=Definiuj wlasne receptury, lancuchowe craftowanie i automatyzacja z rurami.

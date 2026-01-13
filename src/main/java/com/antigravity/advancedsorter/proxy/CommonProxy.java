@@ -32,6 +32,8 @@ import com.antigravity.advancedsorter.pipes.fluid.TileFluidOutlet;
 import com.antigravity.advancedsorter.blocks.BlockInventoryIndex;
 import com.antigravity.advancedsorter.tiles.TileInventoryIndex;
 import com.antigravity.advancedsorter.blocks.ItemNetworkTool;
+import com.antigravity.advancedsorter.autocrafter.BlockAutoCrafter;
+import com.antigravity.advancedsorter.autocrafter.TileAutoCrafter;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
@@ -84,6 +86,9 @@ public class CommonProxy {
         // Inventory Indexer
         public static BlockInventoryIndex INVENTORY_INDEX;
         public static ItemNetworkTool NETWORK_TOOL;
+
+        // Auto Crafter
+        public static BlockAutoCrafter AUTO_CRAFTER;
 
         public void preInit(FMLPreInitializationEvent event) {
         }
@@ -216,6 +221,12 @@ public class CommonProxy {
                 event.getRegistry().register(INVENTORY_INDEX);
                 GameRegistry.registerTileEntity(TileInventoryIndex.class,
                                 new ResourceLocation(AdvancedSorterMod.MODID, "tile_inventory_index"));
+
+                // Auto Crafter
+                AUTO_CRAFTER = new BlockAutoCrafter();
+                event.getRegistry().register(AUTO_CRAFTER);
+                GameRegistry.registerTileEntity(TileAutoCrafter.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_auto_crafter"));
         }
 
         @SubscribeEvent
@@ -278,5 +289,9 @@ public class CommonProxy {
 
                 NETWORK_TOOL = new ItemNetworkTool();
                 event.getRegistry().register(NETWORK_TOOL);
+
+                // Auto Crafter
+                event.getRegistry().register(new ItemBlock(AUTO_CRAFTER)
+                                .setRegistryName(AUTO_CRAFTER.getRegistryName()));
         }
 }

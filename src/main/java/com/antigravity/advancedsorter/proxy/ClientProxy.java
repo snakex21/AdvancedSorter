@@ -209,5 +209,12 @@ public class ClientProxy extends CommonProxy {
                     Item.getItemFromBlock(CommonProxy.TELEPORT_GAS_PIPE), 0,
                     new ModelResourceLocation(CommonProxy.TELEPORT_GAS_PIPE.getRegistryName(), "inventory"));
         }
+
+        // Auto Crafter
+        if (CommonProxy.AUTO_CRAFTER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.AUTO_CRAFTER), 0,
+                    new ModelResourceLocation(CommonProxy.AUTO_CRAFTER.getRegistryName(), "inventory"));
+        }
     }
 }

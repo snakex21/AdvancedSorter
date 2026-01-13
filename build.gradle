@@ -16,6 +16,8 @@ archivesBaseName = "advancedsorter"
 
 sourceCompatibility = targetCompatibility = '1.8'
 
+compileJava.options.encoding = 'UTF-8'
+
 minecraft {
     version = "1.12.2-14.23.5.2768"
     runDir = "run"

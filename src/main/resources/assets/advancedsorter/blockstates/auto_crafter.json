@@ -1,0 +1,8 @@
+{
+    "variants": {
+        "facing=north": { "model": "advancedsorter:auto_crafter" },
+        "facing=south": { "model": "advancedsorter:auto_crafter", "y": 180 },
+        "facing=west":  { "model": "advancedsorter:auto_crafter", "y": 270 },
+        "facing=east":  { "model": "advancedsorter:auto_crafter", "y": 90 }
+    }
+}
