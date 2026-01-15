@@ -30,7 +30,7 @@ public enum CustomRotationHelper {
             Class<? extends Block> foundClass = block.getClass();
             if (blockClass.isAssignableFrom(foundClass)) {
                 if (DEBUG) {
-                    BCLog.logger.info("[api.rotation] Found an assignable block " + block.getRegistryName() + " (" + foundClass + ") for " + blockClass);
+                    // BCLog.logger.info("[api.rotation] Found an assignable block " + block.getRegistryName() + " (" + foundClass + ") for " + blockClass);
                 }
                 registerHandlerInternal(block, handler);
             }
@@ -40,10 +40,10 @@ public enum CustomRotationHelper {
     public void registerHandler(Block block, ICustomRotationHandler handler) {
         if (registerHandlerInternal(block, handler)) {
             if (DEBUG) {
-                BCLog.logger.info("[api.rotation] Setting a rotation handler for block " + block.getRegistryName());
+                // BCLog.logger.info("[api.rotation] Setting a rotation handler for block " + block.getRegistryName());
             }
         } else if (DEBUG) {
-            BCLog.logger.info("[api.rotation] Adding another rotation handler for block " + block.getRegistryName());
+            // BCLog.logger.info("[api.rotation] Adding another rotation handler for block " + block.getRegistryName());
         }
     }
 

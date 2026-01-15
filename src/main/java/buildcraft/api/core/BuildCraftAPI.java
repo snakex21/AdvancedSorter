@@ -41,7 +41,7 @@ public final class BuildCraftAPI {
 
     public static void registerWorldProperty(String name, IWorldProperty property) {
         if (worldProperties.containsKey(name)) {
-            BCLog.logger.warn("The WorldProperty key '" + name + "' is being overridden with " + property.getClass().getSimpleName() + "!");
+            // BCLog.logger.warn("The WorldProperty key '" + name + "' is being overridden with " + property.getClass().getSimpleName() + "!");
         }
         worldProperties.put(name, property);
     }

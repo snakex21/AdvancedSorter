@@ -31,7 +31,7 @@ public abstract class ResourceId {
 
             return id;
         } catch (Throwable e) {
-            e.printStackTrace();
+            // e.printStackTrace();
         }
 
         return null;

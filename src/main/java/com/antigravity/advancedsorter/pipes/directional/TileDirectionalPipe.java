@@ -209,7 +209,6 @@ public class TileDirectionalPipe extends TileItemPipe {
     public boolean canReceiveItem(net.minecraft.item.ItemStack stack, EnumFacing from) {
         SideMode mode = getSideMode(from);
         if (mode != SideMode.INPUT) {
-            System.out.println("[DIRECTIONAL PIPE] canReceiveItem: " + from + " is not INPUT - rejecting");
             return false;
         }
         return true;

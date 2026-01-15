@@ -20,6 +20,8 @@ public final class BCLog {
     }
 
     public static void logErrorAPI(Throwable error, Class<?> classFile) {
+        // Silenced
+        /*
         StringBuilder msg = new StringBuilder("API error! Please update your mods. Error: ");
         msg.append(error);
         StackTraceElement[] stackTrace = error.getStackTrace();
@@ -34,6 +36,7 @@ public final class BCLog {
                     .getCodeSource().getLocation());
             logger.log(Level.ERROR, msg.toString());
         }
+        */
     }
 
     @Deprecated

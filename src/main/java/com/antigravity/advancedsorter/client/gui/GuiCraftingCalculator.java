@@ -26,7 +26,8 @@ public class GuiCraftingCalculator extends GuiScreen {
 
     private final GuiScreen parent;
     private GuiTextField searchField;
-    private List<ItemStack> allItems;
+    // Static cache to avoid reloading thousands of items every time the GUI is opened
+    private static List<ItemStack> allItems;
     private List<ItemStack> filteredItems;
     private ItemStack selectedItem = ItemStack.EMPTY;
     // private RecipeTreeCalculator.MaterialCount materialCount;
@@ -73,6 +74,10 @@ public class GuiCraftingCalculator extends GuiScreen {
     }
 
     private void loadItems() {
+        if (allItems != null && !allItems.isEmpty()) {
+            return; // Already loaded
+        }
+
         if (allItems == null) {
             allItems = new ArrayList<>();
             for (Item item : ForgeRegistries.ITEMS) {
@@ -87,7 +92,7 @@ public class GuiCraftingCalculator extends GuiScreen {
                         allItems.addAll(subItems);
                     }
                 } catch (Exception e) {
-                    AdvancedSorterMod.logger.error("Failed to load subitems for " + item.getRegistryName(), e);
+                    // AdvancedSorterMod.logger.error("Failed to load subitems for " + item.getRegistryName(), e);
                 }
             }
         }

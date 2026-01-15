@@ -26,7 +26,8 @@ public class GuiItemSelector extends GuiScreen {
     private final GuiScreen parent;
     private final IItemSelectorCallback callback;
     private GuiTextField searchField;
-    private List<ItemStack> allItems;
+    // Static cache to avoid reloading thousands of items every time the GUI is opened
+    private static List<ItemStack> allItems;
     private List<ItemStack> filteredItems;
 
     // Grid layout
@@ -61,6 +62,10 @@ public class GuiItemSelector extends GuiScreen {
     }
 
     private void loadItems() {
+        if (allItems != null && !allItems.isEmpty()) {
+            return; // Already loaded
+        }
+
         if (allItems == null) {
             allItems = new ArrayList<>();
             for (Item item : ForgeRegistries.ITEMS) {
@@ -76,7 +81,7 @@ public class GuiItemSelector extends GuiScreen {
                     }
                 } catch (Exception e) {
                     // Ignore items that crash on getSubItems
-                    AdvancedSorterMod.logger.error("Failed to load subitems for " + item.getRegistryName(), e);
+                    // AdvancedSorterMod.logger.error("Failed to load subitems for " + item.getRegistryName(), e);
                 }
             }
         }

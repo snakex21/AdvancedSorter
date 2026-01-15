@@ -51,18 +51,12 @@ public class TileAdvancedSorter extends TileEntity implements ITickable {
             if (!stack.isEmpty()) {
                 EnumFacing targetSide = getTargetSide(stack);
 
-                System.out.println("[AdvancedSorter] Trying to push " + stack.getDisplayName() +
-                        " to " + targetSide.getName() + ", rules count: " + rules.size());
 
                 ItemStack remaining = pushItemToSide(stack, targetSide);
 
                 if (remaining.getCount() != stack.getCount()) {
                     inventory.setStackInSlot(i, remaining);
-                    System.out.println("[AdvancedSorter] Successfully pushed " +
-                            (stack.getCount() - remaining.getCount()) + " items");
                 } else {
-                    System.out.println(
-                            "[AdvancedSorter] Failed to push - no inventory on " + targetSide.getName() + " side?");
                 }
             }
         }
@@ -73,29 +67,20 @@ public class TileAdvancedSorter extends TileEntity implements ITickable {
         List<SortRule> matchingRules = new ArrayList<>();
 
         for (SortRule rule : rules) {
-            System.out.println("[AdvancedSorter] Checking rule: type=" + rule.type +
-                    ", exactItems=" + rule.exactItems.size() +
-                    ", matchValue='" + rule.matchValue + "'" +
-                    ", face=" + rule.outputFace.getName() +
-                    ", override=" + rule.distributionOverride);
 
             if (rule.matches(stack)) {
-                System.out.println("[AdvancedSorter] Rule MATCHED!");
 
                 // Get effective mode for this rule (global + override)
                 SortRule.DistributionMode effectiveMode = getEffectiveMode(rule);
 
                 // If this rule forces FIRST_MATCH, return immediately
                 if (effectiveMode == SortRule.DistributionMode.FIRST_MATCH) {
-                    System.out.println(
-                            "[AdvancedSorter] FIRST_MATCH mode (effective) - using: " + rule.outputFace.getName());
                     return rule.outputFace;
                 }
 
                 // Otherwise collect for potential Round Robin
                 matchingRules.add(rule);
             } else {
-                System.out.println("[AdvancedSorter] Rule did NOT match");
             }
         }
 
@@ -112,12 +97,9 @@ public class TileAdvancedSorter extends TileEntity implements ITickable {
             roundRobinIndex = roundRobinIndex % roundRobinRules.size();
             SortRule selectedRule = roundRobinRules.get(roundRobinIndex);
             roundRobinIndex++;
-            System.out.println("[AdvancedSorter] ROUND_ROBIN mode - using rule " + roundRobinIndex + "/"
-                    + roundRobinRules.size() + ": " + selectedRule.outputFace.getName());
             return selectedRule.outputFace;
         }
 
-        System.out.println("[AdvancedSorter] No rules matched, using default: " + defaultSide.getName());
         return defaultSide;
     }
 
@@ -182,8 +164,6 @@ public class TileAdvancedSorter extends TileEntity implements ITickable {
             if (injectable.canInjectItems(into)) {
                 // injectItem returns leftover items, null color, default speed
                 ItemStack remaining = injectable.injectItem(stack, true, into, null, 0.02);
-                System.out.println("[AdvancedSorter] BC IInjectable result: " +
-                        (remaining.isEmpty() ? "all accepted" : remaining.getCount() + " remaining"));
                 return remaining;
             }
         }

@@ -90,19 +90,25 @@ public class TileTeleportPipe extends TileItemPipe {
 
     @Override
     public void update() {
-        if (world == null || world.isRemote)
+        if (world == null)
             return;
+
+        // CLIENT SIDE: Interpolation
+        if (world.isRemote) {
+            for (TravellingItem item : travellingItems) {
+                item.update(speed);
+            }
+            return;
+        }
+
+        // SERVER SIDE
+        boolean stateChanged = false;
 
         if (connectionsDirty) {
             updateConnections();
             connectionsDirty = false;
         }
 
-        if (!travellingItems.isEmpty()) {
-            System.out.println("[TELEPORT DEBUG] Processing " + travellingItems.size() + " items at " + pos);
-        }
-
-        boolean reachedEndAny = false;
         java.util.Iterator<TravellingItem> iterator = travellingItems.iterator();
         while (iterator.hasNext()) {
             TravellingItem item = iterator.next();
@@ -111,22 +117,16 @@ public class TileTeleportPipe extends TileItemPipe {
             if (item.direction == null && item.progress >= 0.5f) {
                 if (!item.teleported && tryTeleport(item)) {
                     iterator.remove();
-                    reachedEndAny = true;
+                    stateChanged = true; // Item teleported away
                     continue;
                 }
                 // If teleport failed, fallback to normal pipe logic
                 item.direction = chooseOutputDirection(item);
-                if (item.direction != null) {
-                    System.out.println("[TELEPORT DEBUG] Teleport failed or skipped, chose direction " + item.direction
-                            + " at " + pos);
-                }
+                stateChanged = true; // Direction chosen
             }
 
             // Update position
-            float oldProgress = item.progress;
             boolean reachedEnd = item.update(speed);
-            System.out.println("[TELEPORT DEBUG] Item at " + pos + " progress: " + oldProgress + " -> " + item.progress
-                    + ", direction: " + item.direction);
 
             if (reachedEnd) {
                 // Item reached end of pipe
@@ -135,13 +135,15 @@ public class TileTeleportPipe extends TileItemPipe {
 
                     if (transferred) {
                         iterator.remove();
-                        reachedEndAny = true;
+                        stateChanged = true; // Item transferred
                     } else {
                         // Failed to transfer - bounce back
                         EnumFacing oldDir = item.direction;
                         item.direction = chooseOutputDirectionExcluding(item, oldDir);
                         item.progress = 0.0f;
                         item.source = oldDir.getOpposite();
+
+                        stateChanged = true; // Bounce
 
                         if (item.direction == null) {
                             item.direction = item.source;
@@ -153,11 +155,13 @@ public class TileTeleportPipe extends TileItemPipe {
                     }
                 } else {
                     item.progress = 0.0f;
+                    stateChanged = true; // Reset
                 }
             }
         }
 
-        if (reachedEndAny || !travellingItems.isEmpty()) {
+        // Only sync on state changes
+        if (stateChanged) {
             markDirty();
             sendUpdate();
         }
@@ -219,8 +223,6 @@ public class TileTeleportPipe extends TileItemPipe {
                     DimensionManager.initDimension(loc.dimension);
                     targetWorld = DimensionManager.getWorld(loc.dimension);
                 } catch (Exception e) {
-                    System.err.println(
-                            "[TELEPORT ERROR] Failed to initialize dimension " + loc.dimension + ": " + e.getMessage());
                     continue;
                 }
             }

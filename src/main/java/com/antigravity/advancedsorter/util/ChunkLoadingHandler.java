@@ -56,7 +56,6 @@ public class ChunkLoadingHandler implements LoadingCallback {
                     activeTickets.put(pos, ticket);
                     ChunkPos chunkPos = new ChunkPos(pos);
                     ForgeChunkManager.forceChunk(ticket, chunkPos);
-                    System.out.println("[ChunkLoader] Restored chunk loading for teleport pipe at " + pos);
                 } else {
                     // Tile entity no longer exists, release ticket
                     ForgeChunkManager.releaseTicket(ticket);
@@ -89,7 +88,6 @@ public class ChunkLoadingHandler implements LoadingCallback {
                 Type.NORMAL);
 
         if (ticket == null) {
-            System.err.println("[ChunkLoader] Could not get chunk loading ticket for " + pos);
             return;
         }
 
@@ -104,7 +102,6 @@ public class ChunkLoadingHandler implements LoadingCallback {
         ForgeChunkManager.forceChunk(ticket, chunkPos);
 
         activeTickets.put(pos, ticket);
-        System.out.println("[ChunkLoader] Started chunk loading for teleport pipe at " + pos);
     }
 
     /**
@@ -117,7 +114,6 @@ public class ChunkLoadingHandler implements LoadingCallback {
         Ticket ticket = activeTickets.remove(pos);
         if (ticket != null) {
             ForgeChunkManager.releaseTicket(ticket);
-            System.out.println("[ChunkLoader] Released chunk loading for teleport pipe at " + pos);
         }
     }
 

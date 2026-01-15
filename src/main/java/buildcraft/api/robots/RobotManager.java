@@ -45,7 +45,7 @@ public abstract class RobotManager {
 
     public static void registerAIRobot(Class<? extends AIRobot> aiRobot, String name, String legacyClassName) {
         if (aiRobotsByNames.containsKey(name)) {
-            BCLog.logger.info("Overriding " + aiRobotsByNames.get(name).getName() + " with " + aiRobot.getName());
+            // BCLog.logger.info("Overriding " + aiRobotsByNames.get(name).getName() + " with " + aiRobot.getName());
         }
 
         // Check if NBT-load constructor is present
