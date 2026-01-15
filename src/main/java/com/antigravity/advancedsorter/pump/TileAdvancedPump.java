@@ -36,6 +36,7 @@ public class TileAdvancedPump extends TileEntity implements ITickable, IFluidSyn
     private int lastSecondRate = 0;
     private int currentSecondPushed = 0;
     private int tickCounter = 0;
+    private int sleepTimer = 0;
 
     private static final int ENERGY_PER_100MB = 50; // Increased for balance
 
@@ -53,6 +54,11 @@ public class TileAdvancedPump extends TileEntity implements ITickable, IFluidSyn
     public void update() {
         if (world.isRemote)
             return;
+
+        if (sleepTimer > 0) {
+            sleepTimer--;
+            return;
+        }
 
         if (!canOperateWithRedstone()) {
             return;
@@ -82,6 +88,7 @@ public class TileAdvancedPump extends TileEntity implements ITickable, IFluidSyn
                 currentSecondPushed += 1000;
             } else {
                 pumpProgress = 0;
+                sleepTimer = 20;
                 break;
             }
         }
@@ -194,7 +201,7 @@ public class TileAdvancedPump extends TileEntity implements ITickable, IFluidSyn
                 field.setAccessible(true);
                 field.setInt(energyStorage, energy);
             } catch (Exception e) {
-                e.printStackTrace();
+                // e.printStackTrace();
             }
         }
     }

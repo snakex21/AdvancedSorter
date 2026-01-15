@@ -80,68 +80,60 @@ public class TileItemPipe extends TileEntity implements ITickable {
 
     @Override
     public void update() {
-        if (world == null || world.isRemote)
+        if (world == null)
             return;
+
+        // CLIENT SIDE: Interpolation only to smooth out movement between packets
+        if (world.isRemote) {
+            for (TravellingItem item : travellingItems) {
+                item.update(speed);
+            }
+            return;
+        }
+
+        // SERVER SIDE
+        boolean stateChanged = false;
 
         // Update connections if needed
         if (connectionsDirty) {
             updateConnections();
             connectionsDirty = false;
-            System.out.println("[PIPE DEBUG] Updated connections at " + pos + ": " + connections);
         }
 
-        // Debug: log items
-        if (!travellingItems.isEmpty()) {
-            System.out.println("[PIPE DEBUG] Processing " + travellingItems.size() + " items at " + pos);
-        }
-
-        // Process travelling items
-        reachedEndAny = false;
         Iterator<TravellingItem> iterator = travellingItems.iterator();
         while (iterator.hasNext()) {
             TravellingItem item = iterator.next();
 
-            // Items wait in pipe until valid output is available
-            // They will only drop when pipe is broken (handled by breakBlock)
-
             // Calculate direction at center if not set
             if (item.direction == null && item.progress >= 0.5f) {
                 item.direction = chooseOutputDirection(item);
-                if (item.direction != null) {
-                    System.out.println("[PIPE DEBUG] Chose direction " + item.direction + " for item at progress "
-                            + item.progress);
-                }
+                stateChanged = true; // Sync direction choice to client
             }
 
             // Update position
             boolean reachedEnd = item.update(speed);
-            System.out.println("[PIPE DEBUG] Item progress: " + item.progress + ", reachedEnd: " + reachedEnd
-                    + ", direction: " + item.direction);
 
             if (reachedEnd) {
                 // Item reached end of pipe
                 if (item.direction != null) {
                     boolean transferred = transferToNeighbor(item);
-                    System.out.println(
-                            "[PIPE DEBUG] Transfer to " + item.direction + ": " + (transferred ? "SUCCESS" : "FAILED"));
 
                     if (transferred) {
                         iterator.remove();
-                        reachedEndAny = true;
+                        stateChanged = true; // Item removed, sync needed
                     } else {
                         // Failed to transfer - item enters loop mode
-                        // Re-pick direction excluding current direction
                         EnumFacing oldDir = item.direction;
                         item.direction = chooseOutputDirectionExcluding(item, oldDir);
                         item.progress = 0.0f;
                         item.source = oldDir.getOpposite();
 
+                        stateChanged = true; // Sync bounce/retry
+
                         if (item.direction == null) {
                             // No valid direction - bounce back instead of dropping
-                            // Set direction back to where it came from
                             item.direction = item.source;
                             item.source = oldDir;
-                            System.out.println("[PIPE DEBUG] Dead end - bouncing back to " + item.direction);
                             // If still no direction (single ended pipe), just wait
                             if (item.direction == null) {
                                 item.progress = 0.0f; // Reset and wait
@@ -150,22 +142,21 @@ public class TileItemPipe extends TileEntity implements ITickable {
                     }
                 } else {
                     // No valid direction at center - try again next tick
-                    // Keep item bouncing until an exit is available
                     item.progress = 0.0f;
-                    System.out.println("[PIPE DEBUG] No direction - waiting for exit");
+                    stateChanged = true; // Sync reset
                 }
             }
         }
 
-        // Always sync if there are items, or if we just finished processing items
-        // (to clear ghost items on client)
-        if (!travellingItems.isEmpty() || reachedEndAny) {
+        // Only sync if state explicitly changed (item entered/left/turned/bounced)
+        // This drastically reduces packet spam compared to syncing every tick
+        if (stateChanged) {
             markDirty();
             sendUpdate();
         }
     }
 
-    private boolean reachedEndAny = false; // Track if any item reached end this tick
+    private boolean reachedEndAny = false; // Deprecated, kept for structure but unused in new logic
 
     /**
      * Choose output direction for an item using BuildCraft-style round-robin.
@@ -294,12 +285,9 @@ public class TileItemPipe extends TileEntity implements ITickable {
         TileEntity neighbor = world.getTileEntity(neighborPos);
 
         if (neighbor == null) {
-            System.out.println("[PIPE DEBUG] No TileEntity at " + neighborPos);
             return false;
         }
 
-        System.out
-                .println("[PIPE DEBUG] Found neighbor: " + neighbor.getClass().getSimpleName() + " at " + neighborPos);
 
         // Transfer to another pipe
         if (neighbor instanceof TileItemPipe) {
@@ -308,7 +296,6 @@ public class TileItemPipe extends TileEntity implements ITickable {
 
             // Check if neighbor pipe will accept the item
             if (!pipe.canReceiveItem(item.stack, fromDirection)) {
-                System.out.println("[PIPE DEBUG] Neighbor pipe rejected item from " + fromDirection);
                 return false; // Item stays in this pipe
             }
 
@@ -338,14 +325,10 @@ public class TileItemPipe extends TileEntity implements ITickable {
             if (neighbor.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, face)) {
                 IItemHandler handler = neighbor.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, face);
                 if (handler != null && handler.getSlots() > 0) {
-                    System.out.println("[PIPE DEBUG] Trying face " + face + " with " + handler.getSlots() + " slots");
                     ItemStack remaining = ItemHandlerHelper.insertItem(handler, item.stack, false);
                     if (remaining.isEmpty()) {
-                        System.out.println("[PIPE DEBUG] Successfully inserted all items via face " + face);
                         return true;
                     } else if (remaining.getCount() < item.stack.getCount()) {
-                        System.out.println("[PIPE DEBUG] Partially inserted via face " + face + ", "
-                                + remaining.getCount() + " remaining");
                         item.stack = remaining;
                         return false;
                     }
@@ -353,7 +336,6 @@ public class TileItemPipe extends TileEntity implements ITickable {
             }
         }
 
-        System.out.println("[PIPE DEBUG] Could not insert into any slot");
         return false;
     }
 
@@ -373,8 +355,6 @@ public class TileItemPipe extends TileEntity implements ITickable {
     public void receiveItem(ItemStack stack, EnumFacing from, boolean teleported) {
         if (stack.isEmpty())
             return;
-        System.out.println("[PIPE DEBUG] Received item " + stack.getDisplayName() + " from " + from + " at " + pos
-                + (teleported ? " (TELEPORTED)" : ""));
         TravellingItem item = new TravellingItem(stack.copy(), from);
         item.teleported = teleported;
         travellingItems.add(item);
@@ -456,10 +436,6 @@ public class TileItemPipe extends TileEntity implements ITickable {
      * Reconnecting unblocks and re-establishes connection.
      */
     public void toggleConnection(EnumFacing face) {
-        System.out.println("[WRENCH DEBUG] toggleConnection called on " + face + " at " + pos);
-        System.out.println("[WRENCH DEBUG] Current connections: " + connections);
-        System.out.println("[WRENCH DEBUG] Current blocked: " + blockedConnections);
-
         BlockPos neighborPos = pos.offset(face);
         TileEntity neighbor = world.getTileEntity(neighborPos);
         TileItemPipe neighborPipe = (neighbor instanceof TileItemPipe) ? (TileItemPipe) neighbor : null;
@@ -468,7 +444,6 @@ public class TileItemPipe extends TileEntity implements ITickable {
             // Currently connected - DISCONNECT (block both sides)
             connections.remove(face);
             blockedConnections.add(face);
-            System.out.println("[WRENCH DEBUG] Blocked connection to " + face);
 
             // Also block on neighbor side
             if (neighborPipe != null) {
@@ -495,13 +470,9 @@ public class TileItemPipe extends TileEntity implements ITickable {
                     neighborPipe.sendUpdate();
                 }
             }
-            System.out.println("[WRENCH DEBUG] Unblocked and reconnected to " + face);
         } else {
-            System.out.println("[WRENCH DEBUG] Cannot toggle - no pipe at " + face);
         }
 
-        System.out.println("[WRENCH DEBUG] New connections: " + connections);
-        System.out.println("[WRENCH DEBUG] New blocked: " + blockedConnections);
         markDirty();
         sendUpdate();
     }
@@ -611,10 +582,18 @@ public class TileItemPipe extends TileEntity implements ITickable {
 
     @Override
     public void onDataPacket(NetworkManager net, SPacketUpdateTileEntity pkt) {
+        // Save state before update to detect if we need a render update
+        EnumSet<EnumFacing> oldConnections = connections.clone();
+        EnumSet<EnumFacing> oldBlocked = blockedConnections.clone();
+
         readFromNBT(pkt.getNbtCompound());
-        // Force client to re-render this block
+
+        // Only mark for render update if the connections actually changed.
+        // This restores visual updates for wrench/placing while keeping the LAG FIX (ignoring item updates).
         if (world != null && world.isRemote) {
-            world.markBlockRangeForRenderUpdate(pos, pos);
+            if (!connections.equals(oldConnections) || !blockedConnections.equals(oldBlocked)) {
+                world.markBlockRangeForRenderUpdate(pos, pos);
+            }
         }
     }
 
@@ -654,8 +633,6 @@ public class TileItemPipe extends TileEntity implements ITickable {
                         return ItemStack.EMPTY;
 
                     if (!simulate) {
-                        System.out.println("[PIPE DEBUG] insertItem from " + sourceFace + " with "
-                                + stack.getDisplayName() + " at " + pos);
                         receiveItem(stack.copy(), sourceFace); // Track source direction!
                     }
                     return ItemStack.EMPTY;

@@ -105,7 +105,7 @@ public class AIRobot {
                 parentAI.delegateAIAborted(this);
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+            // e.printStackTrace();
             delegateAI = null;
 
             if (parentAI != null) {
@@ -125,7 +125,7 @@ public class AIRobot {
                 update();
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+            // e.printStackTrace();
             abort();
         }
     }
@@ -193,7 +193,7 @@ public class AIRobot {
                     }
                 }
             } catch (Throwable e) {
-                e.printStackTrace();
+                // e.printStackTrace();
             }
         }
     }
@@ -214,7 +214,7 @@ public class AIRobot {
                 ai.loadFromNBT(nbt);
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+            // e.printStackTrace();
         }
 
         return ai;
