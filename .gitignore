@@ -17,8 +17,23 @@ gradle-app.setting
 # Eclipse Gradle plugin generated files
 # Eclipse Core
 .project
-# JDT-specific (Eclipse Java Development Tools)
 .classpath
+.settings/
+bin/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code
+.vscode/
+
+# System
+.DS_Store
+Thumbs.db
 
 # Claude Code
-.claude
+.claude/
