@@ -25,6 +25,7 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
 
     private int frequency = 0;
     private TeleportMode mode = TeleportMode.BOTH;
+    private int roundRobinIndex = 0;
 
     public enum TeleportMode {
         SEND(true, false),
@@ -107,7 +108,7 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
         }
     }
 
-    private void updateRegistry() {
+    public void updateRegistry() {
         if (world != null && !world.isRemote) {
             TeleportRegistry.get(world).registerFluidPipe(frequency, world.provider.getDimension(), pos,
                     mode.canSend(), mode.canReceive());
@@ -131,12 +132,30 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
         TeleportRegistry registry = TeleportRegistry.get(world);
         List<TeleportRegistry.TeleportLocation> receivers = registry.getFluidReceivers(frequency);
 
-        if (receivers.isEmpty())
+        // If no receivers found in registry, try to find and register any pipes
+        // that should be on this frequency but weren't registered yet (world load issue)
+        if (receivers.isEmpty()) {
+            // Cleanup and re-validate registry periodically
+            registry.validateAndCleanup(world);
             return;
+        }
 
         int amountToSend = Math.min(tank.getFluidAmount(), tier.getTransferRate());
 
-        for (TeleportRegistry.TeleportLocation loc : receivers) {
+        // Ensure index is within bounds
+        if (roundRobinIndex >= receivers.size()) {
+            roundRobinIndex = 0;
+        }
+
+        int attempts = 0;
+        int size = receivers.size();
+
+        // Try to find a receiver using Round-Robin approach
+        while (attempts < size) {
+            int currentIndex = (roundRobinIndex + attempts) % size;
+            TeleportRegistry.TeleportLocation loc = receivers.get(currentIndex);
+            attempts++;
+
             if (loc.dimension == world.provider.getDimension() && loc.pos.equals(pos)) {
                 continue; // Skip self
             }
@@ -159,10 +178,19 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
                 TileEntity te = targetWorld.getTileEntity(loc.pos);
                 if (te instanceof TileTeleportFluidPipe) {
                     TileTeleportFluidPipe targetPipe = (TileTeleportFluidPipe) te;
-                    if (targetPipe.getFrequency() != frequency)
+
+                    // Force target to register if not in registry or frequency mismatch
+                    if (targetPipe.getFrequency() != frequency) {
+                        // Registry has stale data - remove invalid entry
+                        registry.removeFluidPipe(loc.pos, loc.dimension);
                         continue;
-                    if (!targetPipe.getMode().canReceive())
+                    }
+                    if (!targetPipe.getMode().canReceive()) {
                         continue;
+                    }
+
+                    // Ensure target is registered (handles world load race condition)
+                    targetPipe.updateRegistry();
 
                     // Transfer fluid
                     FluidStack toTransfer = tank.drain(amountToSend, false);
@@ -171,11 +199,18 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
                         if (filled > 0) {
                             tank.drain(filled, true);
                             targetPipe.markDirty();
-                            targetPipe.sendUpdate();
+                            targetPipe.requestClientSync(); // Use rate-limited sync to prevent packet spam
                             markDirty();
+                            this.requestClientSync(); // Sync local tank changes too
+
+                            // Success! Update index to start from the next one next time
+                            roundRobinIndex = (currentIndex + 1) % size;
                             return; // Only transfer to one receiver per tick
                         }
                     }
+                } else {
+                    // Tile entity is not a teleport pipe - remove from registry
+                    registry.removeFluidPipe(loc.pos, loc.dimension);
                 }
             }
         }

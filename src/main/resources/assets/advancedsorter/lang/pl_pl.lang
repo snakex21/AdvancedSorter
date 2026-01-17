@@ -67,3 +67,11 @@ gui.auto_crafter.add_to_auto=+ Dodaj
 gui.auto_crafter.remove_from_auto=- Usun
 tooltip.advancedsorter.auto_crafter.desc=Automatyczny crafter z wlasnymi recepturami
 tooltip.advancedsorter.auto_crafter.details=Definiuj wlasne receptury, lancuchowe craftowanie i automatyzacja z rurami.
+
+# Zbiorniki na plyny
+tile.advancedsorter.fluid_tank_basic.name=Podstawowy Zbiornik
+tile.advancedsorter.fluid_tank_advanced.name=Zaawansowany Zbiornik
+tile.advancedsorter.fluid_tank_elite.name=Elitarny Zbiornik
+tile.advancedsorter.fluid_tank_ultimate.name=Ostateczny Zbiornik
+tooltip.advancedsorter.fluid_tank.desc=Przechowuje i dystrybuuje plyny
+tooltip.advancedsorter.fluid_tank.details=Konfiguruj strony jako Wejscie/Wyjscie. Automatycznie wypycha do polaczonych rur/zbiornikow.

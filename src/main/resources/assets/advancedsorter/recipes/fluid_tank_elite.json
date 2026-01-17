@@ -1,0 +1,22 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "DDD",
+        "DTD",
+        "DDD"
+    ],
+    "key": {
+        "T": {
+            "item": "advancedsorter:fluid_tank",
+            "data": 1
+        },
+        "D": {
+            "item": "minecraft:diamond"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:fluid_tank",
+        "data": 2,
+        "count": 1
+    }
+}

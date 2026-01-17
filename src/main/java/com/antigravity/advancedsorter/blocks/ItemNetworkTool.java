@@ -205,10 +205,14 @@ public class ItemNetworkTool extends Item {
                     TileEntity sourceTile = worldIn.getTileEntity(crafterCopySource);
                     if (sourceTile instanceof TileAutoCrafter) {
                         TileAutoCrafter sourceCrafter = (TileAutoCrafter) sourceTile;
-                        int recipeCount = sourceCrafter.getRecipes().size();
-                        crafter.copyRecipesFrom(sourceCrafter);
-                        player.sendMessage(new TextComponentString(
-                                "§aPasted " + recipeCount + " recipe(s) to Auto Crafter."));
+                        int added = crafter.copyRecipesFrom(sourceCrafter);
+                        if (added > 0) {
+                            player.sendMessage(new TextComponentString(
+                                    "§aPasted " + added + " new recipe(s) to Auto Crafter."));
+                        } else {
+                            player.sendMessage(new TextComponentString(
+                                    "§eAll recipes are already present in this Auto Crafter."));
+                        }
                     }
                     clearCopySourceAutoCrafter(stack);
                 }

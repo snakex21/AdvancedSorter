@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "tier=basic": {
+            "model": "advancedsorter:fluid_tank_basic"
+        },
+        "tier=advanced": {
+            "model": "advancedsorter:fluid_tank_advanced"
+        },
+        "tier=elite": {
+            "model": "advancedsorter:fluid_tank_elite"
+        },
+        "tier=ultimate": {
+            "model": "advancedsorter:fluid_tank_ultimate"
+        }
+    }
+}

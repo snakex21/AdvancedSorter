@@ -60,6 +60,11 @@ public class PacketCyclePipeMode implements IMessage {
                         ((com.antigravity.advancedsorter.pipes.fluid.directional.TileDirectionalFluidPipe) te)
                                 .cycleMode(EnumFacing.VALUES[message.faceIndex]);
                     }
+                } else if (te instanceof com.antigravity.advancedsorter.tanks.TileFluidTank) {
+                    if (message.faceIndex >= 0 && message.faceIndex < EnumFacing.VALUES.length) {
+                        ((com.antigravity.advancedsorter.tanks.TileFluidTank) te)
+                                .cycleMode(EnumFacing.VALUES[message.faceIndex]);
+                    }
                 }
             });
             return null;

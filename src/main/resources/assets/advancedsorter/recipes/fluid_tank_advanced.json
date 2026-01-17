@@ -1,0 +1,22 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "GGG",
+        "GTG",
+        "GGG"
+    ],
+    "key": {
+        "T": {
+            "item": "advancedsorter:fluid_tank",
+            "data": 0
+        },
+        "G": {
+            "item": "minecraft:gold_ingot"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:fluid_tank",
+        "data": 1,
+        "count": 1
+    }
+}

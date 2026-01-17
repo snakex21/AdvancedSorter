@@ -242,7 +242,7 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
         }
     }
 
-    private void updateRegistry() {
+    public void updateRegistry() {
         if (world != null && !world.isRemote) {
             TeleportRegistry.get(world).registerGasPipe(frequency, world.provider.getDimension(), pos,
                     mode.canSend(), mode.canReceive());
@@ -321,8 +321,11 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
         TeleportRegistry registry = TeleportRegistry.get(world);
         List<TeleportRegistry.TeleportLocation> receivers = registry.getGasReceivers(frequency);
 
-        if (receivers.isEmpty())
+        // If no receivers found in registry, validate and cleanup
+        if (receivers.isEmpty()) {
+            registry.validateAndCleanup(world);
             return;
+        }
 
         int amountToSend = Math.min(tank.getStored(), TRANSFER_RATE);
 
@@ -349,10 +352,19 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
                 TileEntity te = targetWorld.getTileEntity(loc.pos);
                 if (te instanceof TileTeleportGasPipe) {
                     TileTeleportGasPipe targetPipe = (TileTeleportGasPipe) te;
-                    if (targetPipe.getFrequency() != frequency)
+
+                    // Force target to register if not in registry or frequency mismatch
+                    if (targetPipe.getFrequency() != frequency) {
+                        // Registry has stale data - remove invalid entry
+                        registry.removeGasPipe(loc.pos, loc.dimension);
                         continue;
-                    if (!targetPipe.getMode().canReceive())
+                    }
+                    if (!targetPipe.getMode().canReceive()) {
                         continue;
+                    }
+
+                    // Ensure target is registered (handles world load race condition)
+                    targetPipe.updateRegistry();
 
                     // Transfer gas
                     GasStack toTransfer = tank.draw(amountToSend, false);
@@ -365,6 +377,9 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
                             return; // Only transfer to one receiver per tick
                         }
                     }
+                } else {
+                    // Tile entity is not a teleport gas pipe - remove from registry
+                    registry.removeGasPipe(loc.pos, loc.dimension);
                 }
             }
         }

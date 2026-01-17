@@ -34,6 +34,9 @@ import com.antigravity.advancedsorter.tiles.TileInventoryIndex;
 import com.antigravity.advancedsorter.blocks.ItemNetworkTool;
 import com.antigravity.advancedsorter.autocrafter.BlockAutoCrafter;
 import com.antigravity.advancedsorter.autocrafter.TileAutoCrafter;
+import com.antigravity.advancedsorter.tanks.BlockFluidTank;
+import com.antigravity.advancedsorter.tanks.TileFluidTank;
+import com.antigravity.advancedsorter.tanks.ItemBlockFluidTank;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
@@ -89,6 +92,9 @@ public class CommonProxy {
 
         // Auto Crafter
         public static BlockAutoCrafter AUTO_CRAFTER;
+
+        // Fluid Tanks
+        public static BlockFluidTank FLUID_TANK;
 
         public void preInit(FMLPreInitializationEvent event) {
         }
@@ -227,6 +233,12 @@ public class CommonProxy {
                 event.getRegistry().register(AUTO_CRAFTER);
                 GameRegistry.registerTileEntity(TileAutoCrafter.class,
                                 new ResourceLocation(AdvancedSorterMod.MODID, "tile_auto_crafter"));
+
+                // Fluid Tank (all tiers)
+                FLUID_TANK = new BlockFluidTank();
+                event.getRegistry().register(FLUID_TANK);
+                GameRegistry.registerTileEntity(TileFluidTank.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_fluid_tank"));
         }
 
         @SubscribeEvent
@@ -293,5 +305,9 @@ public class CommonProxy {
                 // Auto Crafter
                 event.getRegistry().register(new ItemBlock(AUTO_CRAFTER)
                                 .setRegistryName(AUTO_CRAFTER.getRegistryName()));
+
+                // Fluid Tank (with subtypes for tiers)
+                event.getRegistry().register(new ItemBlockFluidTank(FLUID_TANK)
+                                .setRegistryName(FLUID_TANK.getRegistryName()));
         }
 }
