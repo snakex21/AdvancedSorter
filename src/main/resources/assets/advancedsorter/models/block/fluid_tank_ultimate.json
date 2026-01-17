@@ -1,0 +1,7 @@
+{
+    "parent": "advancedsorter:block/fluid_tank_base",
+    "textures": {
+        "frame": "advancedsorter:blocks/tanks/fluid_tank_ultimate",
+        "particle": "advancedsorter:blocks/tanks/fluid_tank_ultimate"
+    }
+}

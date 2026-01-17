@@ -648,17 +648,48 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
     }
 
     /**
-     * Kopiuje wszystkie receptury z innego craftera.
+     * Kopiuje unikalne receptury z innego craftera.
+     * @return Liczba dodanych receptur
      */
-    public void copyRecipesFrom(TileAutoCrafter other) {
-        recipes.clear();
-        for (CraftingRecipe recipe : other.recipes) {
-            CraftingRecipe copy = new CraftingRecipe(recipe.writeToNBT());
-            copy.setId(nextRecipeId++);
-            recipes.add(copy);
+    public int copyRecipesFrom(TileAutoCrafter other) {
+        int added = 0;
+        for (CraftingRecipe otherRecipe : other.recipes) {
+            boolean exists = false;
+            for (CraftingRecipe myRecipe : recipes) {
+                if (isSameRecipe(myRecipe, otherRecipe)) {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists) {
+                CraftingRecipe copy = new CraftingRecipe(otherRecipe.writeToNBT());
+                copy.setId(nextRecipeId++);
+                recipes.add(copy);
+                added++;
+            }
         }
-        markDirty();
-        sendUpdate();
+
+        if (added > 0) {
+            markDirty();
+            sendUpdate();
+        }
+        return added;
+    }
+
+    /**
+     * Sprawdza czy dwie receptury są identyczne (ten sam wynik i składniki).
+     */
+    private boolean isSameRecipe(CraftingRecipe a, CraftingRecipe b) {
+        // Sprawdź wynik
+        if (!ItemStack.areItemsEqual(a.getResult(), b.getResult()) ||
+            !ItemStack.areItemStackTagsEqual(a.getResult(), b.getResult()) ||
+            a.getResult().getCount() != b.getResult().getCount()) {
+            return false;
+        }
+
+        // Sprawdź składniki
+        return ingredientsMatch(a.getIngredients(), b.getIngredients());
     }
 
     // ========== NBT ==========

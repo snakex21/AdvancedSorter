@@ -26,7 +26,6 @@ import com.antigravity.advancedsorter.pump.TilePumpController;
 import com.antigravity.advancedsorter.pump.ContainerAdvancedPump;
 import com.antigravity.advancedsorter.pump.GuiAdvancedPump;
 import com.antigravity.advancedsorter.pump.TileAdvancedPump;
-import com.antigravity.advancedsorter.pump.TileAdvancedPump;
 import com.antigravity.advancedsorter.container.ContainerInventoryIndex;
 import com.antigravity.advancedsorter.client.gui.GuiInventoryIndex;
 import com.antigravity.advancedsorter.tiles.TileInventoryIndex;
@@ -34,6 +33,9 @@ import com.antigravity.advancedsorter.tiles.TileAdvancedSorter;
 import com.antigravity.advancedsorter.autocrafter.ContainerAutoCrafter;
 import com.antigravity.advancedsorter.autocrafter.GuiAutoCrafter;
 import com.antigravity.advancedsorter.autocrafter.TileAutoCrafter;
+import com.antigravity.advancedsorter.tanks.ContainerFluidTank;
+import com.antigravity.advancedsorter.tanks.GuiFluidTank;
+import com.antigravity.advancedsorter.tanks.TileFluidTank;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
@@ -113,6 +115,12 @@ public class GuiHandler implements IGuiHandler {
         if (ID == AdvancedSorterMod.GUI_AUTO_CRAFTER) {
             if (tile instanceof TileAutoCrafter) {
                 return new ContainerAutoCrafter(player.inventory, (TileAutoCrafter) tile);
+            }
+        }
+
+        if (ID == AdvancedSorterMod.GUI_ADVANCED_TANK) {
+            if (tile instanceof TileFluidTank) {
+                return new ContainerFluidTank(player.inventory, (TileFluidTank) tile);
             }
         }
 
@@ -198,6 +206,12 @@ public class GuiHandler implements IGuiHandler {
             if (tile instanceof TileAutoCrafter) {
                 return new GuiAutoCrafter(new ContainerAutoCrafter(player.inventory, (TileAutoCrafter) tile),
                         (TileAutoCrafter) tile);
+            }
+        }
+
+        if (ID == AdvancedSorterMod.GUI_ADVANCED_TANK) {
+            if (tile instanceof TileFluidTank) {
+                return new GuiFluidTank(player.inventory, (TileFluidTank) tile);
             }
         }
 

@@ -16,6 +16,9 @@ import com.antigravity.advancedsorter.pipes.fluid.TileFluidPipe;
 import com.antigravity.advancedsorter.client.render.TileFluidPipeRenderer;
 import com.antigravity.advancedsorter.pipes.gas.teleport.TileTeleportGasPipe;
 import com.antigravity.advancedsorter.client.render.TileTeleportGasPipeRenderer;
+import com.antigravity.advancedsorter.tanks.TileFluidTank;
+import com.antigravity.advancedsorter.tanks.TankTier;
+import com.antigravity.advancedsorter.client.render.TileFluidTankRenderer;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.client.model.ModelLoader;
@@ -66,6 +69,9 @@ public class ClientProxy extends CommonProxy {
 
         // Gas pipe renderer
         ClientRegistry.bindTileEntitySpecialRenderer(TileTeleportGasPipe.class, new TileTeleportGasPipeRenderer());
+
+        // Fluid tank renderer (shows fluid inside)
+        ClientRegistry.bindTileEntitySpecialRenderer(TileFluidTank.class, new TileFluidTankRenderer());
 
         // Register Keybinds
         KeyInputHandler.register();
@@ -215,6 +221,15 @@ public class ClientProxy extends CommonProxy {
             ModelLoader.setCustomModelResourceLocation(
                     Item.getItemFromBlock(CommonProxy.AUTO_CRAFTER), 0,
                     new ModelResourceLocation(CommonProxy.AUTO_CRAFTER.getRegistryName(), "inventory"));
+        }
+
+        // Fluid Tanks (all tiers)
+        if (CommonProxy.FLUID_TANK != null) {
+            for (TankTier tier : TankTier.values()) {
+                ModelLoader.setCustomModelResourceLocation(
+                        Item.getItemFromBlock(CommonProxy.FLUID_TANK), tier.getId(),
+                        new ModelResourceLocation(CommonProxy.FLUID_TANK.getRegistryName(), "tier=" + tier.getName()));
+            }
         }
     }
 }

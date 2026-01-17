@@ -67,3 +67,11 @@ gui.auto_crafter.add_to_auto=+ Add
 gui.auto_crafter.remove_from_auto=- Remove
 tooltip.advancedsorter.auto_crafter.desc=Automatic crafter with custom recipes
 tooltip.advancedsorter.auto_crafter.details=Define your own recipes, chain crafting, and pipe automation.
+
+# Fluid Tanks
+tile.advancedsorter.fluid_tank_basic.name=Basic Fluid Tank
+tile.advancedsorter.fluid_tank_advanced.name=Advanced Fluid Tank
+tile.advancedsorter.fluid_tank_elite.name=Elite Fluid Tank
+tile.advancedsorter.fluid_tank_ultimate.name=Ultimate Fluid Tank
+tooltip.advancedsorter.fluid_tank.desc=Stores and distributes fluids
+tooltip.advancedsorter.fluid_tank.details=Configure sides as Input/Output. Auto-outputs to connected pipes/tanks.

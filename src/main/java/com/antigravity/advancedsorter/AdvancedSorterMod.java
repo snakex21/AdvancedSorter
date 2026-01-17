@@ -32,6 +32,7 @@ public class AdvancedSorterMod {
     public static final int GUI_NETWORK_TOOL = 10;
     public static final int GUI_TELEPORT_GAS_PIPE = 11;
     public static final int GUI_AUTO_CRAFTER = 12;
+    public static final int GUI_ADVANCED_TANK = 13;
 
     // Creative Tab
     public static final CreativeTabs CREATIVE_TAB = new CreativeTabs(MODID) {

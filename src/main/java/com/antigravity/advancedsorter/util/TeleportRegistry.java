@@ -42,6 +42,93 @@ public class TeleportRegistry extends WorldSavedData {
         return instance;
     }
 
+    /**
+     * Validates all registered pipes and removes entries for pipes that no longer exist.
+     * Should be called periodically or when issues are detected.
+     */
+    public void validateAndCleanup(World world) {
+        boolean changed = false;
+
+        // Clean fluid pipes
+        for (Map.Entry<Integer, List<TeleportLocation>> entry : fluidPipesByFrequency.entrySet()) {
+            Iterator<TeleportLocation> iter = entry.getValue().iterator();
+            while (iter.hasNext()) {
+                TeleportLocation loc = iter.next();
+                if (!isValidFluidPipe(world, loc)) {
+                    iter.remove();
+                    changed = true;
+                }
+            }
+        }
+
+        // Clean gas pipes
+        for (Map.Entry<Integer, List<TeleportLocation>> entry : gasPipesByFrequency.entrySet()) {
+            Iterator<TeleportLocation> iter = entry.getValue().iterator();
+            while (iter.hasNext()) {
+                TeleportLocation loc = iter.next();
+                if (!isValidGasPipe(world, loc)) {
+                    iter.remove();
+                    changed = true;
+                }
+            }
+        }
+
+        // Clean item pipes
+        for (Map.Entry<Integer, List<TeleportLocation>> entry : pipesByFrequency.entrySet()) {
+            Iterator<TeleportLocation> iter = entry.getValue().iterator();
+            while (iter.hasNext()) {
+                TeleportLocation loc = iter.next();
+                if (!isValidItemPipe(world, loc)) {
+                    iter.remove();
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed) {
+            markDirty();
+        }
+    }
+
+    private boolean isValidFluidPipe(World world, TeleportLocation loc) {
+        try {
+            net.minecraft.world.WorldServer targetWorld = net.minecraftforge.common.DimensionManager.getWorld(loc.dimension);
+            if (targetWorld == null) return true; // Can't validate, keep it
+            if (!targetWorld.isBlockLoaded(loc.pos)) return true; // Not loaded, keep it
+
+            net.minecraft.tileentity.TileEntity te = targetWorld.getTileEntity(loc.pos);
+            return te instanceof com.antigravity.advancedsorter.pipes.fluid.teleport.TileTeleportFluidPipe;
+        } catch (Exception e) {
+            return true; // On error, keep the entry
+        }
+    }
+
+    private boolean isValidGasPipe(World world, TeleportLocation loc) {
+        try {
+            net.minecraft.world.WorldServer targetWorld = net.minecraftforge.common.DimensionManager.getWorld(loc.dimension);
+            if (targetWorld == null) return true;
+            if (!targetWorld.isBlockLoaded(loc.pos)) return true;
+
+            net.minecraft.tileentity.TileEntity te = targetWorld.getTileEntity(loc.pos);
+            return te instanceof com.antigravity.advancedsorter.pipes.gas.teleport.TileTeleportGasPipe;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    private boolean isValidItemPipe(World world, TeleportLocation loc) {
+        try {
+            net.minecraft.world.WorldServer targetWorld = net.minecraftforge.common.DimensionManager.getWorld(loc.dimension);
+            if (targetWorld == null) return true;
+            if (!targetWorld.isBlockLoaded(loc.pos)) return true;
+
+            net.minecraft.tileentity.TileEntity te = targetWorld.getTileEntity(loc.pos);
+            return te instanceof com.antigravity.advancedsorter.pipes.teleport.TileTeleportPipe;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
     // ========== Item Pipe Methods ==========
 
     public void registerPipe(int frequency, int dimension, BlockPos pos, boolean canSend, boolean canReceive) {

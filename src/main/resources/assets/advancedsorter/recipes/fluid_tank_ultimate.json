@@ -1,0 +1,22 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "EEE",
+        "ETE",
+        "EEE"
+    ],
+    "key": {
+        "T": {
+            "item": "advancedsorter:fluid_tank",
+            "data": 2
+        },
+        "E": {
+            "item": "minecraft:emerald"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:fluid_tank",
+        "data": 3,
+        "count": 1
+    }
+}
