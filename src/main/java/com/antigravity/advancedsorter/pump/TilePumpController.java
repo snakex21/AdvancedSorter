@@ -17,7 +17,7 @@ import java.util.List;
  * Tile entity for pump controller - controls extraction pipes remotely by
  * frequency.
  */
-public class TilePumpController extends TileEntity implements ITickable {
+public class TilePumpController extends TileEntity {
 
     public static class PumpPreset {
         public String name;
@@ -47,21 +47,21 @@ public class TilePumpController extends TileEntity implements ITickable {
     }
 
     private List<PumpPreset> presets = new ArrayList<>();
+    private boolean firstTick = true;
 
     public TilePumpController() {
         // Default preset will be added in readFromNBT if missing
     }
 
     @Override
-    public void update() {
-        if (world == null || world.isRemote) {
-            return;
-        }
-
-        // Update registry with our pumping state for each preset
-        PumpRegistry registry = PumpRegistry.get(world);
-        for (PumpPreset preset : presets) {
-            registry.setPumpingEnabled(preset.frequency, preset.enabled);
+    public void onLoad() {
+        super.onLoad();
+        if (world != null && !world.isRemote) {
+            PumpRegistry registry = PumpRegistry.get(world);
+            for (PumpPreset preset : presets) {
+                // Force sync state on load
+                registry.setPumpingEnabled(preset.frequency, preset.enabled);
+            }
         }
     }
 

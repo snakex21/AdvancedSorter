@@ -1,0 +1,8 @@
+{
+  "parent": "block/cube_bottom_top",
+  "textures": {
+    "top": "advancedsorter:blocks/auto_repairer/top",
+    "bottom": "advancedsorter:blocks/auto_repairer/bottom",
+    "side": "advancedsorter:blocks/auto_repairer/side"
+  }
+}

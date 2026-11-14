@@ -47,6 +47,17 @@ public class TileItemPipe extends TileEntity implements ITickable {
     // Cached valid outputs (updated when connections change)
     protected boolean connectionsDirty = true;
 
+    // OPTYMALIZACJA: Sleep timer dla rur bez przedmiotów
+    protected int sleepTimer = 0;
+
+    // OPTYMALIZACJA: Reużywalne listy dla chooseOutputDirection
+    private final List<EnumFacing> reusableInventoryOutputs = new ArrayList<>();
+    private final List<EnumFacing> reusablePipeOutputs = new ArrayList<>();
+
+    // OPTYMALIZACJA: Cache dla sąsiednich TileEntity (odświeżane gdy connectionsDirty)
+    private final Map<EnumFacing, TileEntity> neighborCache = new EnumMap<>(EnumFacing.class);
+    private boolean neighborCacheDirty = true;
+
     public TileItemPipe() {
         this(PipeTier.IRON);
     }
@@ -92,6 +103,18 @@ public class TileItemPipe extends TileEntity implements ITickable {
         }
 
         // SERVER SIDE
+        // OPTYMALIZACJA: Jeśli rura jest pusta i nie wymaga aktualizacji połączeń, śpimy
+        if (travellingItems.isEmpty() && !connectionsDirty) {
+            if (sleepTimer > 0) {
+                sleepTimer--;
+                return;
+            }
+            // Co 2 sekundy sprawdź połączenia na wszelki wypadek (zwykle obsługiwane przez zdarzenia)
+            sleepTimer = 40;
+        } else {
+            sleepTimer = 0; // Wybudź jeśli są przedmioty
+        }
+
         boolean stateChanged = false;
 
         // Update connections if needed
@@ -164,30 +187,36 @@ public class TileItemPipe extends TileEntity implements ITickable {
      * Excludes source direction to prevent backtracking.
      */
     protected EnumFacing chooseOutputDirection(TravellingItem item) {
-        List<EnumFacing> inventoryOutputs = new ArrayList<>();
-        List<EnumFacing> pipeOutputs = new ArrayList<>();
+        // OPTYMALIZACJA: Reużywaj listy zamiast tworzyć nowe
+        reusableInventoryOutputs.clear();
+        reusablePipeOutputs.clear();
+
+        // OPTYMALIZACJA: Odśwież cache sąsiadów jeśli trzeba
+        if (neighborCacheDirty) {
+            updateNeighborCache();
+        }
 
         for (EnumFacing face : connections) {
             // Exclude source (no backtracking)
             if (face == item.source)
                 continue;
 
-            // Check if neighbor can receive
-            if (canOutputTo(face)) {
-                BlockPos neighborPos = pos.offset(face);
-                TileEntity neighbor = world.getTileEntity(neighborPos);
+            // OPTYMALIZACJA: Użyj cache zamiast getTileEntity
+            TileEntity neighbor = neighborCache.get(face);
 
+            // Check if neighbor can receive
+            if (canOutputToNeighbor(face, neighbor)) {
                 // Separate inventories from pipes (prioritize inventories)
                 if (neighbor instanceof TileItemPipe) {
-                    pipeOutputs.add(face);
+                    reusablePipeOutputs.add(face);
                 } else {
-                    inventoryOutputs.add(face);
+                    reusableInventoryOutputs.add(face);
                 }
             }
         }
 
         // Prioritize inventory outputs over pipe outputs
-        List<EnumFacing> validOutputs = inventoryOutputs.isEmpty() ? pipeOutputs : inventoryOutputs;
+        List<EnumFacing> validOutputs = reusableInventoryOutputs.isEmpty() ? reusablePipeOutputs : reusableInventoryOutputs;
 
         if (validOutputs.isEmpty()) {
             return null;
@@ -208,29 +237,47 @@ public class TileItemPipe extends TileEntity implements ITickable {
     }
 
     /**
+     * Odświeża cache sąsiadów bez pełnego updateConnections
+     */
+    private void updateNeighborCache() {
+        neighborCache.clear();
+        for (EnumFacing face : EnumFacing.VALUES) {
+            neighborCache.put(face, world.getTileEntity(pos.offset(face)));
+        }
+        neighborCacheDirty = false;
+    }
+
+    /**
      * Choose output excluding a specific direction (for loop retry).
      * Uses round-robin like the main method.
      */
     protected EnumFacing chooseOutputDirectionExcluding(TravellingItem item, EnumFacing exclude) {
-        List<EnumFacing> inventoryOutputs = new ArrayList<>();
-        List<EnumFacing> pipeOutputs = new ArrayList<>();
+        // OPTYMALIZACJA: Reużywaj listy zamiast tworzyć nowe
+        reusableInventoryOutputs.clear();
+        reusablePipeOutputs.clear();
+
+        // OPTYMALIZACJA: Odśwież cache sąsiadów jeśli trzeba
+        if (neighborCacheDirty) {
+            updateNeighborCache();
+        }
 
         for (EnumFacing face : connections) {
             if (face == item.source || face == exclude)
                 continue;
-            if (canOutputTo(face)) {
-                BlockPos neighborPos = pos.offset(face);
-                TileEntity neighbor = world.getTileEntity(neighborPos);
 
+            // OPTYMALIZACJA: Użyj cache
+            TileEntity neighbor = neighborCache.get(face);
+
+            if (canOutputToNeighbor(face, neighbor)) {
                 if (neighbor instanceof TileItemPipe) {
-                    pipeOutputs.add(face);
+                    reusablePipeOutputs.add(face);
                 } else {
-                    inventoryOutputs.add(face);
+                    reusableInventoryOutputs.add(face);
                 }
             }
         }
 
-        List<EnumFacing> validOutputs = inventoryOutputs.isEmpty() ? pipeOutputs : inventoryOutputs;
+        List<EnumFacing> validOutputs = reusableInventoryOutputs.isEmpty() ? reusablePipeOutputs : reusableInventoryOutputs;
 
         if (validOutputs.isEmpty()) {
             return null;
@@ -249,12 +296,19 @@ public class TileItemPipe extends TileEntity implements ITickable {
     }
 
     /**
-     * Check if we can output to a face.
+     * Check if we can output to a face (używa cache).
      */
     protected boolean canOutputTo(EnumFacing face) {
-        BlockPos neighborPos = pos.offset(face);
-        TileEntity neighbor = world.getTileEntity(neighborPos);
+        if (neighborCacheDirty) {
+            updateNeighborCache();
+        }
+        return canOutputToNeighbor(face, neighborCache.get(face));
+    }
 
+    /**
+     * Wersja canOutputTo używająca już pobranego TileEntity
+     */
+    private boolean canOutputToNeighbor(EnumFacing face, TileEntity neighbor) {
         if (neighbor == null)
             return false;
 
@@ -275,19 +329,31 @@ public class TileItemPipe extends TileEntity implements ITickable {
         return false;
     }
 
+    // OPTYMALIZACJA: Statyczna lista kierunków do sprawdzania dla inventory (unikamy alokacji tablicy co tick)
+    private static final EnumFacing[] INVENTORY_SEARCH_ORDER = new EnumFacing[] {
+            EnumFacing.UP, // Furnace input is from top
+            null, // All slots
+            EnumFacing.DOWN,
+            EnumFacing.NORTH, EnumFacing.SOUTH, EnumFacing.EAST, EnumFacing.WEST
+    };
+
     /**
      * Transfer item to neighbor pipe or inventory.
-     * 
+     *
      * @return true if transfer successful
      */
     protected boolean transferToNeighbor(TravellingItem item) {
-        BlockPos neighborPos = pos.offset(item.direction);
-        TileEntity neighbor = world.getTileEntity(neighborPos);
+        // OPTYMALIZACJA: Użyj cache zamiast world.getTileEntity
+        TileEntity neighbor = neighborCache.get(item.direction);
 
         if (neighbor == null) {
-            return false;
+            // Fallback checking (in case cache is desynced, though shouldn't happen)
+            if (world.isBlockLoaded(pos.offset(item.direction))) {
+                neighbor = world.getTileEntity(pos.offset(item.direction));
+            }
+            if (neighbor == null)
+                return false;
         }
-
 
         // Transfer to another pipe
         if (neighbor instanceof TileItemPipe) {
@@ -303,39 +369,50 @@ public class TileItemPipe extends TileEntity implements ITickable {
             return true;
         }
 
-        // Transfer to inventory - try multiple faces for sided inventories (like
-        // furnaces)
+        // Transfer to inventory - try multiple faces for sided inventories
         EnumFacing primaryFace = item.direction.getOpposite();
 
-        // Priority order: primary face, UP (for furnace input), null (all slots), then
-        // other faces
-        EnumFacing[] facesToTry = new EnumFacing[] {
-                primaryFace,
-                EnumFacing.UP, // Furnace input is from top
-                null, // All slots
-                EnumFacing.DOWN,
-                EnumFacing.NORTH, EnumFacing.SOUTH, EnumFacing.EAST, EnumFacing.WEST
-        };
+        // 1. Try primary face first (most common case)
+        if (tryInsertToFace(neighbor, item, primaryFace)) {
+            return true;
+        }
 
-        for (EnumFacing face : facesToTry) {
-            // Skip primary face if we've already tried it (it's first in list)
-            if (face == primaryFace && face != facesToTry[0])
-                continue;
-
-            if (neighbor.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, face)) {
-                IItemHandler handler = neighbor.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, face);
-                if (handler != null && handler.getSlots() > 0) {
-                    ItemStack remaining = ItemHandlerHelper.insertItem(handler, item.stack, false);
-                    if (remaining.isEmpty()) {
-                        return true;
-                    } else if (remaining.getCount() < item.stack.getCount()) {
-                        item.stack = remaining;
-                        return false;
-                    }
-                }
+        // 2. Try other faces from static list (avoid allocation)
+        for (EnumFacing face : INVENTORY_SEARCH_ORDER) {
+            if (face == primaryFace) continue; // Skip already checked
+            if (tryInsertToFace(neighbor, item, face)) {
+                return true;
             }
         }
 
+        return false;
+    }
+
+    private boolean tryInsertToFace(TileEntity neighbor, TravellingItem item, EnumFacing face) {
+        if (neighbor.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, face)) {
+            IItemHandler handler = neighbor.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, face);
+            if (handler != null && handler.getSlots() > 0) {
+                ItemStack remaining = ItemHandlerHelper.insertItem(handler, item.stack, false);
+                if (remaining.isEmpty()) {
+                    return true;
+                } else if (remaining.getCount() < item.stack.getCount()) {
+                    item.stack = remaining;
+                    // Continued trying other faces? usually if partial insert, we stop and wait?
+                    // Original logic returned false on partial insert (stuck in pipe), so we imitate that.
+                    // But here we are inside a helper.
+                    // If partial insert happened, we modified item.stack.
+                    // We should probably return false here to indicate "not fully inserted, try next face?"
+                    // Or return false to indicate "stuck".
+                    // The original code:
+                    // else if (remaining.getCount() < item.stack.getCount()) {
+                    //    item.stack = remaining;
+                    //    return false;
+                    // }
+                    // So partial insert stops the process and keeps item in pipe.
+                    return false;
+                }
+            }
+        }
         return false;
     }
 
@@ -358,6 +435,7 @@ public class TileItemPipe extends TileEntity implements ITickable {
         TravellingItem item = new TravellingItem(stack.copy(), from);
         item.teleported = teleported;
         travellingItems.add(item);
+        sleepTimer = 0; // WAKE UP
         markDirty();
         sendUpdate();
     }
@@ -378,18 +456,24 @@ public class TileItemPipe extends TileEntity implements ITickable {
      * Respects blockedConnections - blocked sides will not auto-connect.
      */
     public void updateConnections() {
+        // Save old state to check for changes
+        EnumSet<EnumFacing> oldConnections = connections.clone();
+
         connections.clear();
+        neighborCache.clear(); // OPTYMALIZACJA: Odśwież cache sąsiadów
 
         for (EnumFacing face : EnumFacing.VALUES) {
+            // Cache sąsiada
+            TileEntity neighbor = world.getTileEntity(pos.offset(face));
+            neighborCache.put(face, neighbor);
+
             // Skip blocked connections - they never auto-connect
             if (blockedConnections.contains(face)) {
                 continue;
             }
 
-            if (canConnectTo(face)) {
+            if (canConnectToNeighbor(face, neighbor)) {
                 // Also check if neighbor has blocked us
-                BlockPos neighborPos = pos.offset(face);
-                TileEntity neighbor = world.getTileEntity(neighborPos);
                 if (neighbor instanceof TileItemPipe) {
                     TileItemPipe neighborPipe = (TileItemPipe) neighbor;
                     if (neighborPipe.blockedConnections.contains(face.getOpposite())) {
@@ -400,17 +484,19 @@ public class TileItemPipe extends TileEntity implements ITickable {
             }
         }
 
-        markDirty();
-        sendUpdate();
+        neighborCacheDirty = false;
+
+        // OPTYMALIZACJA: Tylko wysyłaj update jeśli coś się faktycznie zmieniło
+        if (!connections.equals(oldConnections)) {
+            markDirty();
+            sendUpdate();
+        }
     }
 
     /**
-     * Check if we can connect to a neighbor on this face.
+     * Wersja canConnectTo używająca już pobranego TileEntity
      */
-    protected boolean canConnectTo(EnumFacing face) {
-        BlockPos neighborPos = pos.offset(face);
-        TileEntity neighbor = world.getTileEntity(neighborPos);
-
+    private boolean canConnectToNeighbor(EnumFacing face, TileEntity neighbor) {
         if (neighbor == null)
             return false;
 
@@ -428,6 +514,18 @@ public class TileItemPipe extends TileEntity implements ITickable {
         }
 
         return false;
+    }
+
+    /**
+     * Check if we can connect to a neighbor on this face.
+     * Publiczna metoda dla kompatybilności z podklasami.
+     */
+    protected boolean canConnectTo(EnumFacing face) {
+        TileEntity neighbor = neighborCache.get(face);
+        if (neighbor == null) {
+            neighbor = world.getTileEntity(pos.offset(face));
+        }
+        return canConnectToNeighbor(face, neighbor);
     }
 
     /**
@@ -473,6 +571,7 @@ public class TileItemPipe extends TileEntity implements ITickable {
         } else {
         }
 
+        markConnectionsDirty(); // Ważne: Odśwież cache po zmianie ręcznej
         markDirty();
         sendUpdate();
     }
@@ -492,6 +591,7 @@ public class TileItemPipe extends TileEntity implements ITickable {
      */
     public void markConnectionsDirty() {
         connectionsDirty = true;
+        neighborCacheDirty = true; // OPTYMALIZACJA: Invaliduj też cache sąsiadów
     }
 
     // Getters for rendering

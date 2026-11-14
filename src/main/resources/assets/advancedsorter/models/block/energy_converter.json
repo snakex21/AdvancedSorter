@@ -1,0 +1,6 @@
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "advancedsorter:blocks/energy_converter/energy_converter"
+  }
+}

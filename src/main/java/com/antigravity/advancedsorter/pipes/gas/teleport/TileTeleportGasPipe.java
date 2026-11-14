@@ -3,6 +3,7 @@ package com.antigravity.advancedsorter.pipes.gas.teleport;
 import com.antigravity.advancedsorter.AdvancedSorterMod;
 import com.antigravity.advancedsorter.network.PacketTeleportInfo;
 import com.antigravity.advancedsorter.util.TeleportRegistry;
+import com.antigravity.advancedsorter.util.PendingGasTeleportRegistry;
 import mekanism.api.gas.*;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -36,6 +37,7 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
 
     private int frequency = 0;
     private TeleportMode mode = TeleportMode.BOTH;
+    private int roundRobinIndex = 0;
 
     private boolean syncRequested = false;
     private int syncCooldown = 0;
@@ -65,6 +67,13 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
     private final Set<EnumFacing> connections = EnumSet.noneOf(EnumFacing.class);
     private final Set<EnumFacing> blockedConnections = EnumSet.noneOf(EnumFacing.class);
     private boolean connectionsDirty = true;
+
+    // OPTYMALIZACJA: Cache handlerów sąsiadów
+    private final java.util.Map<EnumFacing, IGasHandler> neighborCache = new java.util.EnumMap<>(EnumFacing.class);
+    private boolean neighborCacheDirty = true;
+
+    // OPTYMALIZACJA: Sleep timer
+    private int sleepTimer = 0;
 
     public enum TeleportMode {
         SEND(true, false),
@@ -108,8 +117,26 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
     }
 
     public void setMode(TeleportMode mode) {
+        TeleportMode oldMode = this.mode;
         this.mode = mode;
         updateRegistry();
+
+        // OPTYMALIZACJA: Chunk loading tylko dla SEND mode
+        if (world != null && !world.isRemote) {
+            if (mode.canSend() && !oldMode.canSend()) {
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .requestChunkLoading(world, pos);
+            } else if (!mode.canSend() && oldMode.canSend()) {
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .releaseChunkLoading(world, pos);
+            }
+
+            // Odbierz oczekujące gazy jeśli teraz może odbierać
+            if (mode.canReceive() && !oldMode.canReceive()) {
+                retrievePendingGases();
+            }
+        }
+
         markDirty();
         sendUpdate();
         syncConnectionInfo();
@@ -121,6 +148,7 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
 
     public void checkConnections() {
         connectionsDirty = true;
+        neighborCacheDirty = true;
     }
 
     public void toggleConnection(EnumFacing side) {
@@ -214,14 +242,46 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
     }
 
     @Override
+    public void validate() {
+        super.validate();
+        if (world != null && !world.isRemote) {
+            updateRegistry();
+        }
+    }
+
+    @Override
     public void onLoad() {
         super.onLoad();
         if (world != null && !world.isRemote) {
             updateRegistry();
-            // Request chunk loading to keep teleporting even when player leaves
-            com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
-                    .requestChunkLoading(world, pos);
+            // OPTYMALIZACJA: Chunk loading tylko dla rur WYSYŁAJĄCYCH
+            if (mode.canSend()) {
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .requestChunkLoading(world, pos);
+            }
+            // Odbierz oczekujące gazy (wysłane gdy chunk był niezaładowany)
+            if (mode.canReceive()) {
+                retrievePendingGases();
+            }
             checkConnections();
+        }
+    }
+
+    /**
+     * Odbiera gazy które były wysłane gdy ten chunk był niezaładowany.
+     */
+    private void retrievePendingGases() {
+        if (world == null || world.isRemote) return;
+        if (!mode.canReceive()) return;
+
+        PendingGasTeleportRegistry pending = PendingGasTeleportRegistry.get(world);
+        java.util.List<GasStack> gases = pending.retrievePendingGases(
+                world.provider.getDimension(), pos);
+
+        for (GasStack gas : gases) {
+            if (gas != null && gas.amount > 0) {
+                tank.receive(gas, true);
+            }
         }
     }
 
@@ -236,9 +296,11 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
         super.invalidate();
         if (world != null && !world.isRemote) {
             TeleportRegistry.get(world).removeGasPipe(pos, world.provider.getDimension());
-            // Release chunk loading
-            com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
-                    .releaseChunkLoading(world, pos);
+            // Zwolnij chunk loading jeśli rura wysyłała
+            if (mode.canSend()) {
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .releaseChunkLoading(world, pos);
+            }
         }
     }
 
@@ -254,6 +316,11 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
         if (world == null || world.isRemote)
             return;
 
+        if (sleepTimer > 0) {
+            sleepTimer--;
+            return;
+        }
+
         // Handle sync request from tank with rate limiting
         if (syncCooldown > 0) {
             syncCooldown--;
@@ -268,121 +335,154 @@ public class TileTeleportGasPipe extends TileEntity implements ITickable, IGasHa
             updateConnections();
         }
 
+        boolean worked = false;
+
         // Try to teleport gas if we can send
         if (mode.canSend() && tank.getStored() > 0) {
-            tryTeleportGas();
+            if (tryTeleportGas()) {
+                worked = true;
+            }
         }
 
         // Try to output gas to neighbors if we can receive (and thus have gas to give)
         if (mode.canReceive() && tank.getStored() > 0) {
-            distributeGas();
+            if (distributeGas()) {
+                worked = true;
+            }
+        }
+
+        // Jeśli rura nic nie robi (brak gazu lub brak możliwości wysłania) - śpij
+        if (!worked && tank.getStored() <= 0) {
+            sleepTimer = 20;
         }
     }
 
-    private void distributeGas() {
-        if (connections.isEmpty()) return;
+    private boolean distributeGas() {
+        if (connections.isEmpty()) return false;
+
+        // OPTYMALIZACJA: Odśwież cache jeśli brudny
+        if (neighborCacheDirty) {
+            updateNeighborCache();
+        }
+
+        boolean anyDistributed = false;
 
         for (EnumFacing side : connections) {
+            IGasHandler handler = neighborCache.get(side);
+            if (handler == null) continue;
+
+            if (handler.canReceiveGas(side.getOpposite(), tank.getGasType())) {
+                int amountToSend = Math.min(tank.getStored(), TRANSFER_RATE);
+                GasStack toSend = new GasStack(tank.getGasType(), amountToSend);
+
+                int accepted = handler.receiveGas(side.getOpposite(), toSend, true);
+                if (accepted > 0) {
+                    tank.draw(accepted, true);
+                    anyDistributed = true;
+                    if (tank.getStored() <= 0) break;
+                }
+            }
+        }
+        return anyDistributed;
+    }
+
+    private void updateNeighborCache() {
+        neighborCache.clear();
+        for (EnumFacing side : EnumFacing.VALUES) {
             TileEntity tile = world.getTileEntity(pos.offset(side));
             if (tile == null) continue;
 
-            // Check for Gas Handler Capability
             if (tile.hasCapability(GAS_HANDLER_CAPABILITY, side.getOpposite())) {
-                IGasHandler handler = tile.getCapability(GAS_HANDLER_CAPABILITY, side.getOpposite());
-                if (handler != null && handler.canReceiveGas(side.getOpposite(), tank.getGasType())) {
-                    int amountToSend = Math.min(tank.getStored(), TRANSFER_RATE);
-                    GasStack toSend = new GasStack(tank.getGasType(), amountToSend);
-
-                    int accepted = handler.receiveGas(side.getOpposite(), toSend, true);
-                    if (accepted > 0) {
-                        tank.draw(accepted, true);
-                        if (tank.getStored() <= 0) break;
-                    }
-                }
-            }
-            // Legacy/Direct IGasHandler check (just in case)
-            else if (tile instanceof IGasHandler) {
-                IGasHandler handler = (IGasHandler) tile;
-                if (handler.canReceiveGas(side.getOpposite(), tank.getGasType())) {
-                    int amountToSend = Math.min(tank.getStored(), TRANSFER_RATE);
-                    GasStack toSend = new GasStack(tank.getGasType(), amountToSend);
-
-                    int accepted = handler.receiveGas(side.getOpposite(), toSend, true);
-                    if (accepted > 0) {
-                        tank.draw(accepted, true);
-                        if (tank.getStored() <= 0) break;
-                    }
-                }
+                neighborCache.put(side, tile.getCapability(GAS_HANDLER_CAPABILITY, side.getOpposite()));
+            } else if (tile instanceof IGasHandler) {
+                neighborCache.put(side, (IGasHandler) tile);
             }
         }
+        neighborCacheDirty = false;
     }
 
-    private void tryTeleportGas() {
+    private boolean tryTeleportGas() {
         TeleportRegistry registry = TeleportRegistry.get(world);
         List<TeleportRegistry.TeleportLocation> receivers = registry.getGasReceivers(frequency);
 
-        // If no receivers found in registry, validate and cleanup
         if (receivers.isEmpty()) {
-            registry.validateAndCleanup(world);
-            return;
+            return false;
         }
 
         int amountToSend = Math.min(tank.getStored(), TRANSFER_RATE);
+        int receiverCount = receivers.size();
+        int startIndex = roundRobinIndex % receiverCount;
 
-        for (TeleportRegistry.TeleportLocation loc : receivers) {
+        for (int i = 0; i < receiverCount; i++) {
+            int currentIndex = (startIndex + i) % receiverCount;
+            TeleportRegistry.TeleportLocation loc = receivers.get(currentIndex);
+
             if (loc.dimension == world.provider.getDimension() && loc.pos.equals(pos)) {
                 continue; // Skip self
             }
 
+            // Pobierz świat docelowy
             WorldServer targetWorld = DimensionManager.getWorld(loc.dimension);
+
+            // OPTYMALIZACJA: Jeśli wymiar nie jest załadowany - kolejkuj gaz
             if (targetWorld == null) {
-                try {
-                    DimensionManager.initDimension(loc.dimension);
-                    targetWorld = DimensionManager.getWorld(loc.dimension);
-                } catch (Exception e) {
+                GasStack toQueue = tank.draw(amountToSend, true);
+                if (toQueue != null && toQueue.amount > 0) {
+                    PendingGasTeleportRegistry.get(world).queueGas(loc.dimension, loc.pos, toQueue);
+                    markDirty();
+                    syncRequested = true;
+                    // Move RR index forward
+                    roundRobinIndex = (currentIndex + 1) % receiverCount;
+                    return true; // Gaz "wysłany" (do kolejki)
+                }
+                continue;
+            }
+
+            // OPTYMALIZACJA: Jeśli chunk nie jest załadowany - kolejkuj gaz
+            if (!targetWorld.isBlockLoaded(loc.pos)) {
+                GasStack toQueue = tank.draw(amountToSend, true);
+                if (toQueue != null && toQueue.amount > 0) {
+                    PendingGasTeleportRegistry.get(world).queueGas(loc.dimension, loc.pos, toQueue);
+                    markDirty();
+                    syncRequested = true;
+                    // Move RR index forward
+                    roundRobinIndex = (currentIndex + 1) % receiverCount;
+                    return true; // Gaz "wysłany" (do kolejki)
+                }
+                continue;
+            }
+
+            // Chunk jest załadowany - teleportuj bezpośrednio
+            TileEntity te = targetWorld.getTileEntity(loc.pos);
+            if (te instanceof TileTeleportGasPipe) {
+                TileTeleportGasPipe targetPipe = (TileTeleportGasPipe) te;
+
+                if (targetPipe.getFrequency() != frequency) {
+                    registry.removeGasPipe(loc.pos, loc.dimension);
                     continue;
                 }
-            }
-
-            if (targetWorld != null) {
-                if (!targetWorld.isBlockLoaded(loc.pos)) {
-                    targetWorld.getChunkProvider().loadChunk(loc.pos.getX() >> 4, loc.pos.getZ() >> 4);
+                if (!targetPipe.getMode().canReceive()) {
+                    continue;
                 }
 
-                TileEntity te = targetWorld.getTileEntity(loc.pos);
-                if (te instanceof TileTeleportGasPipe) {
-                    TileTeleportGasPipe targetPipe = (TileTeleportGasPipe) te;
-
-                    // Force target to register if not in registry or frequency mismatch
-                    if (targetPipe.getFrequency() != frequency) {
-                        // Registry has stale data - remove invalid entry
-                        registry.removeGasPipe(loc.pos, loc.dimension);
-                        continue;
+                // Transfer gas
+                GasStack toTransfer = tank.draw(amountToSend, false);
+                if (toTransfer != null && toTransfer.amount > 0) {
+                    int received = targetPipe.tank.receive(toTransfer, true);
+                    if (received > 0) {
+                        tank.draw(received, true);
+                        targetPipe.markDirty();
+                        targetPipe.syncRequested = true;
+                        // Move RR index forward
+                        roundRobinIndex = (currentIndex + 1) % receiverCount;
+                        return true; // Only transfer to one receiver per tick
                     }
-                    if (!targetPipe.getMode().canReceive()) {
-                        continue;
-                    }
-
-                    // Ensure target is registered (handles world load race condition)
-                    targetPipe.updateRegistry();
-
-                    // Transfer gas
-                    GasStack toTransfer = tank.draw(amountToSend, false);
-                    if (toTransfer != null && toTransfer.amount > 0) {
-                        int received = targetPipe.tank.receive(toTransfer, true);
-                        if (received > 0) {
-                            tank.draw(received, true);
-                            targetPipe.markDirty();
-                            targetPipe.sendUpdate();
-                            return; // Only transfer to one receiver per tick
-                        }
-                    }
-                } else {
-                    // Tile entity is not a teleport gas pipe - remove from registry
-                    registry.removeGasPipe(loc.pos, loc.dimension);
                 }
+            } else {
+                registry.removeGasPipe(loc.pos, loc.dimension);
             }
         }
+        return false;
     }
 
     // ========== IGasHandler Implementation ==========

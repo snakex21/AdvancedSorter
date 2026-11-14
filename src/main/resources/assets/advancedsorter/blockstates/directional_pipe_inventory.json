@@ -1,0 +1,5 @@
+{
+    "variants": {
+        "inventory": { "model": "advancedsorter:directional_pipe_core" }
+    }
+}

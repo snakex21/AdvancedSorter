@@ -21,8 +21,24 @@ import net.minecraftforge.fluids.capability.IFluidHandler;
 import com.antigravity.advancedsorter.pipes.fluid.IFluidSyncable;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Field;
+import java.util.EnumMap;
+import java.util.Map;
 
 public class TileAdvancedPump extends TileEntity implements ITickable, IFluidSyncable {
+
+    // OPTYMALIZACJA: Cache dla pola energii
+    private static final Field ENERGY_FIELD;
+    static {
+        Field f = null;
+        try {
+            f = EnergyStorage.class.getDeclaredField("energy");
+            f.setAccessible(true);
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+        ENERGY_FIELD = f;
+    }
 
     private final SyncingFluidTank tank = new SyncingFluidTank(16000, this);
     private final EnergyStorage energyStorage = new EnergyStorage(100000, 1000, 1000);
@@ -37,6 +53,13 @@ public class TileAdvancedPump extends TileEntity implements ITickable, IFluidSyn
     private int currentSecondPushed = 0;
     private int tickCounter = 0;
     private int sleepTimer = 0;
+
+    // OPTYMALIZACJA: Round Robin dla równomiernego podziału płynów
+    private int roundRobinIndex = 0;
+
+    // OPTYMALIZACJA: Cache dla IFluidHandler sąsiadów
+    private final Map<EnumFacing, IFluidHandler> neighborFluidHandlerCache = new EnumMap<>(EnumFacing.class);
+    private boolean neighborCacheDirty = true;
 
     private static final int ENERGY_PER_100MB = 50; // Increased for balance
 
@@ -111,34 +134,87 @@ public class TileAdvancedPump extends TileEntity implements ITickable, IFluidSyn
         if (tank.getFluidAmount() <= 0)
             return;
 
+        // OPTYMALIZACJA: Aktualizuj cache tylko gdy potrzeba
+        if (neighborCacheDirty) {
+            updateNeighborFluidCache();
+        }
+
+        if (neighborFluidHandlerCache.isEmpty()) return;
+
+        // Create a list of handlers to iterate in Round Robin order
+        // We use the EnumFacing order but offset by roundRobinIndex
+        EnumFacing[] facings = EnumFacing.VALUES;
+        int count = facings.length;
+
+        boolean distributed = false;
+
+        for (int i = 0; i < count; i++) {
+            // Calculate actual index wrapping around
+            int idx = (roundRobinIndex + i) % count;
+            EnumFacing facing = facings[idx];
+
+            IFluidHandler handler = neighborFluidHandlerCache.get(facing);
+            if (handler != null) {
+                FluidStack drained = tank.drain(100, false); // Simulate drain
+                if (drained != null) {
+                    int filled = handler.fill(drained, true);
+                    if (filled > 0) {
+                        tank.drain(filled, true);
+                        distributed = true;
+
+                        // If we emptied the tank, stop
+                        if (tank.getFluidAmount() <= 0) break;
+                    }
+                }
+            }
+        }
+
+        // Advance RR index if we did something (or even if we didn't, to be fair next tick)
+        if (distributed) {
+            roundRobinIndex = (roundRobinIndex + 1) % count;
+        }
+    }
+
+    private void updateNeighborFluidCache() {
+        neighborCacheDirty = false;
+        neighborFluidHandlerCache.clear();
+
         for (EnumFacing facing : EnumFacing.VALUES) {
             TileEntity te = world.getTileEntity(pos.offset(facing));
             if (te != null && te.hasCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY, facing.getOpposite())) {
                 IFluidHandler handler = te.getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY,
                         facing.getOpposite());
                 if (handler != null) {
-                    FluidStack drained = tank.drain(100, false);
-                    if (drained != null) {
-                        int filled = handler.fill(drained, true);
-                        tank.drain(filled, true);
-                    }
+                    neighborFluidHandlerCache.put(facing, handler);
                 }
             }
         }
     }
 
+    /**
+     * Wywołaj gdy sąsiad się zmieni (np. blok obok został umieszczony/usunięty)
+     */
+    public void onNeighborChanged() {
+        neighborCacheDirty = true;
+    }
+
     private boolean findAndExtractFluid() {
         for (int i = 0; i < 64; i++) {
             BlockPos targetPos = pos.add(scanX, scanY, scanZ);
-            IBlockState state = world.getBlockState(targetPos);
 
-            if (isFluidSource(state, targetPos)) {
-                FluidStack fluid = getFluidFromBlock(state, targetPos);
-                if (fluid != null && tank.fill(fluid, false) == fluid.amount) {
-                    tank.fill(fluid, true);
-                    world.setBlockToAir(targetPos);
-                    advanceScanner();
-                    return true;
+            // OPTYMALIZACJA: Nie ładuj chunków!
+            // Sprawdź czy chunk jest załadowany zanim spróbujesz pobrać BlockState
+            if (world.isBlockLoaded(targetPos)) {
+                IBlockState state = world.getBlockState(targetPos);
+
+                if (isFluidSource(state, targetPos)) {
+                    FluidStack fluid = getFluidFromBlock(state, targetPos);
+                    if (fluid != null && tank.fill(fluid, false) == fluid.amount) {
+                        tank.fill(fluid, true);
+                        world.setBlockToAir(targetPos);
+                        advanceScanner();
+                        return true;
+                    }
                 }
             }
 
@@ -195,11 +271,9 @@ public class TileAdvancedPump extends TileEntity implements ITickable, IFluidSyn
     }
 
     public void setEnergyStored(int energy) {
-        if (world.isRemote) {
+        if (world.isRemote && ENERGY_FIELD != null) {
             try {
-                java.lang.reflect.Field field = EnergyStorage.class.getDeclaredField("energy");
-                field.setAccessible(true);
-                field.setInt(energyStorage, energy);
+                ENERGY_FIELD.setInt(energyStorage, energy);
             } catch (Exception e) {
                 // e.printStackTrace();
             }

@@ -4,6 +4,7 @@ import com.antigravity.advancedsorter.pipes.fluid.FluidPipeTier;
 import com.antigravity.advancedsorter.pipes.fluid.TileFluidPipe;
 import com.antigravity.advancedsorter.network.PacketTeleportInfo;
 import com.antigravity.advancedsorter.util.TeleportRegistry;
+import com.antigravity.advancedsorter.util.PendingFluidTeleportRegistry;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -53,6 +54,9 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
         super(FluidPipeTier.DIAMOND);
     }
 
+    // OPTYMALIZACJA: Sleep timer dla rur teleportacyjnych
+    private int sleepTimer = 0;
+
     public int getFrequency() {
         return frequency;
     }
@@ -70,11 +74,39 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
     }
 
     public void setMode(TeleportMode mode) {
+        TeleportMode oldMode = this.mode;
         this.mode = mode;
         updateRegistry();
+
+        // OPTYMALIZACJA: Chunk loading tylko dla SEND mode
+        if (world != null && !world.isRemote) {
+            if (mode.canSend() && !oldMode.canSend()) {
+                // Teraz wysyła - załaduj chunk
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .requestChunkLoading(world, pos);
+            } else if (!mode.canSend() && oldMode.canSend()) {
+                // Już nie wysyła - zwolnij chunk
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .releaseChunkLoading(world, pos);
+            }
+
+            // Odbierz oczekujące płyny jeśli teraz może odbierać
+            if (mode.canReceive() && !oldMode.canReceive()) {
+                retrievePendingFluids();
+            }
+        }
+
         markDirty();
         sendUpdate();
         syncConnectionInfo();
+    }
+
+    @Override
+    public void validate() {
+        super.validate();
+        if (world != null && !world.isRemote) {
+            updateRegistry();
+        }
     }
 
     @Override
@@ -82,9 +114,33 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
         super.onLoad();
         if (world != null && !world.isRemote) {
             updateRegistry();
-            // Request chunk loading to keep teleporting even when player leaves
-            com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
-                    .requestChunkLoading(world, pos);
+            // OPTYMALIZACJA: Chunk loading tylko dla rur WYSYŁAJĄCYCH
+            if (mode.canSend()) {
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .requestChunkLoading(world, pos);
+            }
+            // Odbierz oczekujące płyny (wysłane gdy chunk był niezaładowany)
+            if (mode.canReceive()) {
+                retrievePendingFluids();
+            }
+        }
+    }
+
+    /**
+     * Odbiera płyny które były wysłane gdy ten chunk był niezaładowany.
+     */
+    private void retrievePendingFluids() {
+        if (world == null || world.isRemote) return;
+        if (!mode.canReceive()) return;
+
+        PendingFluidTeleportRegistry pending = PendingFluidTeleportRegistry.get(world);
+        List<FluidStack> fluids = pending.retrievePendingFluids(
+                world.provider.getDimension(), pos);
+
+        for (FluidStack fluid : fluids) {
+            if (fluid != null && fluid.amount > 0) {
+                tank.fill(fluid, true);
+            }
         }
     }
 
@@ -102,9 +158,11 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
         super.invalidate();
         if (world != null && !world.isRemote) {
             TeleportRegistry.get(world).removeFluidPipe(pos, world.provider.getDimension());
-            // Release chunk loading
-            com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
-                    .releaseChunkLoading(world, pos);
+            // Zwolnij chunk loading jeśli rura wysyłała
+            if (mode.canSend()) {
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .releaseChunkLoading(world, pos);
+            }
         }
     }
 
@@ -120,24 +178,31 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
         if (world == null || world.isRemote)
             return;
 
+        if (sleepTimer > 0) {
+            sleepTimer--;
+            // Nadal wywołuj super.update() bo rura może odbierać płyn od sąsiadów
+            // Ale jeśli jest pusta i śpi, super.update() (TileFluidPipe) też powinna być zoptymalizowana.
+        }
+
         super.update();
 
         // Try to teleport fluid if we can send
-        if (mode.canSend() && tank.getFluidAmount() > 0) {
-            tryTeleportFluid();
+        if (mode.canSend() && tank.getFluidAmount() > 0 && sleepTimer <= 0) {
+            if (!tryTeleportFluid()) {
+                sleepTimer = 20; // Śpij jeśli brak odbiorników
+            }
         }
     }
 
-    private void tryTeleportFluid() {
+    /**
+     * @return true if fluid was sent or queued
+     */
+    private boolean tryTeleportFluid() {
         TeleportRegistry registry = TeleportRegistry.get(world);
         List<TeleportRegistry.TeleportLocation> receivers = registry.getFluidReceivers(frequency);
 
-        // If no receivers found in registry, try to find and register any pipes
-        // that should be on this frequency but weren't registered yet (world load issue)
         if (receivers.isEmpty()) {
-            // Cleanup and re-validate registry periodically
-            registry.validateAndCleanup(world);
-            return;
+            return false;
         }
 
         int amountToSend = Math.min(tank.getFluidAmount(), tier.getTransferRate());
@@ -160,60 +225,68 @@ public class TileTeleportFluidPipe extends TileFluidPipe {
                 continue; // Skip self
             }
 
+            // Pobierz świat docelowy
             WorldServer targetWorld = DimensionManager.getWorld(loc.dimension);
+
+            // OPTYMALIZACJA: Jeśli wymiar nie jest załadowany - kolejkuj płyn
             if (targetWorld == null) {
-                try {
-                    DimensionManager.initDimension(loc.dimension);
-                    targetWorld = DimensionManager.getWorld(loc.dimension);
-                } catch (Exception e) {
+                FluidStack toQueue = tank.drain(amountToSend, true);
+                if (toQueue != null && toQueue.amount > 0) {
+                    PendingFluidTeleportRegistry.get(world).queueFluid(loc.dimension, loc.pos, toQueue);
+                    roundRobinIndex = (currentIndex + 1) % size;
+                    markDirty();
+                    requestClientSync();
+                    return true; // Płyn "wysłany" (do kolejki)
+                }
+                continue;
+            }
+
+            // OPTYMALIZACJA: Jeśli chunk nie jest załadowany - kolejkuj płyn
+            if (!targetWorld.isBlockLoaded(loc.pos)) {
+                FluidStack toQueue = tank.drain(amountToSend, true);
+                if (toQueue != null && toQueue.amount > 0) {
+                    PendingFluidTeleportRegistry.get(world).queueFluid(loc.dimension, loc.pos, toQueue);
+                    roundRobinIndex = (currentIndex + 1) % size;
+                    markDirty();
+                    requestClientSync();
+                    return true; // Płyn "wysłany" (do kolejki)
+                }
+                continue;
+            }
+
+            // Chunk jest załadowany - teleportuj bezpośrednio
+            TileEntity te = targetWorld.getTileEntity(loc.pos);
+            if (te instanceof TileTeleportFluidPipe) {
+                TileTeleportFluidPipe targetPipe = (TileTeleportFluidPipe) te;
+
+                if (targetPipe.getFrequency() != frequency) {
+                    registry.removeFluidPipe(loc.pos, loc.dimension);
                     continue;
                 }
-            }
-
-            if (targetWorld != null) {
-                if (!targetWorld.isBlockLoaded(loc.pos)) {
-                    targetWorld.getChunkProvider().loadChunk(loc.pos.getX() >> 4, loc.pos.getZ() >> 4);
+                if (!targetPipe.getMode().canReceive()) {
+                    continue;
                 }
 
-                TileEntity te = targetWorld.getTileEntity(loc.pos);
-                if (te instanceof TileTeleportFluidPipe) {
-                    TileTeleportFluidPipe targetPipe = (TileTeleportFluidPipe) te;
+                // Transfer fluid
+                FluidStack toTransfer = tank.drain(amountToSend, false);
+                if (toTransfer != null && toTransfer.amount > 0) {
+                    int filled = targetPipe.tank.fill(toTransfer, true);
+                    if (filled > 0) {
+                        tank.drain(filled, true);
+                        targetPipe.markDirty();
+                        targetPipe.requestClientSync();
+                        markDirty();
+                        this.requestClientSync();
 
-                    // Force target to register if not in registry or frequency mismatch
-                    if (targetPipe.getFrequency() != frequency) {
-                        // Registry has stale data - remove invalid entry
-                        registry.removeFluidPipe(loc.pos, loc.dimension);
-                        continue;
+                        roundRobinIndex = (currentIndex + 1) % size;
+                        return true; // Only transfer to one receiver per tick
                     }
-                    if (!targetPipe.getMode().canReceive()) {
-                        continue;
-                    }
-
-                    // Ensure target is registered (handles world load race condition)
-                    targetPipe.updateRegistry();
-
-                    // Transfer fluid
-                    FluidStack toTransfer = tank.drain(amountToSend, false);
-                    if (toTransfer != null && toTransfer.amount > 0) {
-                        int filled = targetPipe.tank.fill(toTransfer, true);
-                        if (filled > 0) {
-                            tank.drain(filled, true);
-                            targetPipe.markDirty();
-                            targetPipe.requestClientSync(); // Use rate-limited sync to prevent packet spam
-                            markDirty();
-                            this.requestClientSync(); // Sync local tank changes too
-
-                            // Success! Update index to start from the next one next time
-                            roundRobinIndex = (currentIndex + 1) % size;
-                            return; // Only transfer to one receiver per tick
-                        }
-                    }
-                } else {
-                    // Tile entity is not a teleport pipe - remove from registry
-                    registry.removeFluidPipe(loc.pos, loc.dimension);
                 }
+            } else {
+                registry.removeFluidPipe(loc.pos, loc.dimension);
             }
         }
+        return false;
     }
 
     @Override

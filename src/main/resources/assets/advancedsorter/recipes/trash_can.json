@@ -1,0 +1,16 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "S S",
+        "S S",
+        "SLS"
+    ],
+    "key": {
+        "S": { "item": "minecraft:stone" },
+        "L": { "item": "minecraft:lava_bucket" }
+    },
+    "result": {
+        "item": "advancedsorter:trash_can",
+        "count": 1
+    }
+}

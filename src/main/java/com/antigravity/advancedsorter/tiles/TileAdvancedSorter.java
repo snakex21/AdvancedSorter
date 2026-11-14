@@ -3,6 +3,7 @@ package com.antigravity.advancedsorter.tiles;
 import com.antigravity.advancedsorter.util.RuleSerializer;
 import com.antigravity.advancedsorter.util.SortRule;
 import buildcraft.api.transport.IInjectable;
+import buildcraft.api.core.EnumColor;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -20,7 +21,9 @@ import net.minecraftforge.items.ItemStackHandler;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 public class TileAdvancedSorter extends TileEntity implements ITickable {
 
@@ -37,7 +40,56 @@ public class TileAdvancedSorter extends TileEntity implements ITickable {
     public SortRule.DistributionMode distributionMode = SortRule.DistributionMode.FIRST_MATCH;
     private int roundRobinIndex = 0; // Used for Round Robin distribution
 
+    // OPTYMALIZACJA: Cache IItemHandler dla każdej strony
+    private final Map<EnumFacing, IItemHandler> neighborHandlerCache = new EnumMap<>(EnumFacing.class);
+    // OPTYMALIZACJA: Cache IInjectable (BuildCraft)
+    private final Map<EnumFacing, IInjectable> neighborInjectableCache = new EnumMap<>(EnumFacing.class);
+    private boolean neighborCacheDirty = true;
+
+    // OPTYMALIZACJA: Reużywalne listy
+    private final List<SortRule> reusableMatchingRules = new ArrayList<>();
+    private final List<SortRule> reusableRoundRobinRules = new ArrayList<>();
+
+    // OPTYMALIZACJA: Sleep timer
+    private int sleepTimer = 0;
+
     public TileAdvancedSorter() {
+    }
+
+    // Wywoływane gdy sąsiad się zmieni
+    public void onNeighborChanged() {
+        neighborCacheDirty = true;
+        sleepTimer = 0; // Wake up
+    }
+
+    private void updateNeighborCache() {
+        if (!neighborCacheDirty) return;
+        neighborCacheDirty = false;
+        neighborHandlerCache.clear();
+        neighborInjectableCache.clear();
+
+        for (EnumFacing side : EnumFacing.VALUES) {
+            BlockPos targetPos = pos.offset(side);
+            TileEntity neighbor = world.getTileEntity(targetPos);
+            if (neighbor != null) {
+                // Capability Cache
+                EnumFacing into = side.getOpposite();
+                IItemHandler handler = null;
+                if (neighbor.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, into)) {
+                    handler = neighbor.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, into);
+                } else if (neighbor.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null)) {
+                    handler = neighbor.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null);
+                }
+                if (handler != null) {
+                    neighborHandlerCache.put(side, handler);
+                }
+
+                // BuildCraft Cache
+                if (neighbor instanceof IInjectable) {
+                    neighborInjectableCache.put(side, (IInjectable) neighbor);
+                }
+            }
+        }
     }
 
     @Override
@@ -45,26 +97,43 @@ public class TileAdvancedSorter extends TileEntity implements ITickable {
         if (world.isRemote)
             return;
 
+        if (sleepTimer > 0) {
+            sleepTimer--;
+            return;
+        }
+
+        // OPTYMALIZACJA: Aktualizuj cache sąsiadów jeśli potrzeba
+        updateNeighborCache();
+
+        boolean hasItems = false;
+        boolean didWork = false;
+
         // Try to eject items from buffer
         for (int i = 0; i < inventory.getSlots(); i++) {
             ItemStack stack = inventory.getStackInSlot(i);
             if (!stack.isEmpty()) {
+                hasItems = true;
                 EnumFacing targetSide = getTargetSide(stack);
-
 
                 ItemStack remaining = pushItemToSide(stack, targetSide);
 
                 if (remaining.getCount() != stack.getCount()) {
                     inventory.setStackInSlot(i, remaining);
-                } else {
+                    didWork = true;
                 }
             }
+        }
+
+        if (!hasItems) {
+            sleepTimer = 20; // Sleep 1 second if empty
+        } else if (!didWork) {
+            sleepTimer = 10; // Sleep 0.5 second if stuck
         }
     }
 
     private EnumFacing getTargetSide(ItemStack stack) {
-        // Collect all matching rules with their effective distribution modes
-        List<SortRule> matchingRules = new ArrayList<>();
+        // OPTYMALIZACJA: Reużywaj listy
+        reusableMatchingRules.clear();
 
         for (SortRule rule : rules) {
 
@@ -79,23 +148,23 @@ public class TileAdvancedSorter extends TileEntity implements ITickable {
                 }
 
                 // Otherwise collect for potential Round Robin
-                matchingRules.add(rule);
+                reusableMatchingRules.add(rule);
             } else {
             }
         }
 
         // ROUND_ROBIN: cycle through matching rules (only those with RR mode)
-        List<SortRule> roundRobinRules = new ArrayList<>();
-        for (SortRule rule : matchingRules) {
+        reusableRoundRobinRules.clear();
+        for (SortRule rule : reusableMatchingRules) {
             SortRule.DistributionMode effectiveMode = getEffectiveMode(rule);
             if (effectiveMode == SortRule.DistributionMode.ROUND_ROBIN) {
-                roundRobinRules.add(rule);
+                reusableRoundRobinRules.add(rule);
             }
         }
 
-        if (!roundRobinRules.isEmpty()) {
-            roundRobinIndex = roundRobinIndex % roundRobinRules.size();
-            SortRule selectedRule = roundRobinRules.get(roundRobinIndex);
+        if (!reusableRoundRobinRules.isEmpty()) {
+            roundRobinIndex = roundRobinIndex % reusableRoundRobinRules.size();
+            SortRule selectedRule = reusableRoundRobinRules.get(roundRobinIndex);
             roundRobinIndex++;
             return selectedRule.outputFace;
         }
@@ -121,50 +190,39 @@ public class TileAdvancedSorter extends TileEntity implements ITickable {
     }
 
     /**
-     * Push item to neighbor using IItemHandler capability first,
+     * Push item to neighbor using cached IItemHandler,
      * then BuildCraft IInjectable as fallback for BC pipes.
-     * 
+     *
      * @return remaining items that couldn't be inserted
      */
     private ItemStack pushItemToSide(ItemStack stack, EnumFacing side) {
-        BlockPos targetPos = pos.offset(side);
-        TileEntity neighbor = world.getTileEntity(targetPos);
-
-        if (neighbor == null) {
-            return stack; // No neighbor, keep in buffer
-        }
-
-        EnumFacing into = side.getOpposite();
-
-        // Try 1: Standard IItemHandler capability (works with most mods)
-        if (neighbor.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, into)) {
-            IItemHandler handler = neighbor.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, into);
-            if (handler != null) {
-                ItemStack result = ItemHandlerHelper.insertItem(handler, stack, false);
-                if (result.getCount() < stack.getCount()) {
-                    return result; // Successfully inserted some items
-                }
+        // OPTYMALIZACJA: Użyj cache zamiast sprawdzać capabilities co tick
+        IItemHandler handler = neighborHandlerCache.get(side);
+        if (handler != null) {
+            ItemStack result = ItemHandlerHelper.insertItem(handler, stack, false);
+            if (result.getCount() < stack.getCount()) {
+                return result; // Successfully inserted some items
             }
         }
 
-        // Try 2: IItemHandler on null side (some mods)
-        if (neighbor.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null)) {
-            IItemHandler handler = neighbor.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null);
-            if (handler != null) {
-                ItemStack result = ItemHandlerHelper.insertItem(handler, stack, false);
-                if (result.getCount() < stack.getCount()) {
-                    return result; // Successfully inserted some items
+        // Fallback: BuildCraft IInjectable (z cache)
+        IInjectable injectable = neighborInjectableCache.get(side);
+        if (injectable != null) {
+            try {
+                EnumFacing into = side.getOpposite();
+                if (injectable.canInjectItems(into)) {
+                    // injectItem returns leftover items, null color, default speed
+                    ItemStack remaining = injectable.injectItem(stack, true, into, null, 0.02);
+                    if (remaining == null) {
+                        return stack; // Safety check for bad API implementations
+                    }
+                    return remaining;
                 }
-            }
-        }
-
-        // Try 3: BuildCraft IInjectable (for BC pipes)
-        if (neighbor instanceof IInjectable) {
-            IInjectable injectable = (IInjectable) neighbor;
-            if (injectable.canInjectItems(into)) {
-                // injectItem returns leftover items, null color, default speed
-                ItemStack remaining = injectable.injectItem(stack, true, into, null, 0.02);
-                return remaining;
+            } catch (Throwable t) {
+                // Catch ALL errors from external mods
+                // Remove from cache to avoid repeated errors/spam if it's broken
+                neighborInjectableCache.remove(side);
+                return stack;
             }
         }
 
@@ -255,6 +313,10 @@ public class TileAdvancedSorter extends TileEntity implements ITickable {
 
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            // Require at least one rule (preset) to be defined before accepting items
+            if (rules.isEmpty()) {
+                return stack;
+            }
             return inventory.insertItem(slot, stack, simulate);
         }
 

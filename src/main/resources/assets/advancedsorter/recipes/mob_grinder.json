@@ -1,0 +1,18 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "ISI",
+        "SDS",
+        "RIR"
+    ],
+    "key": {
+        "I": { "item": "minecraft:iron_ingot" },
+        "S": { "item": "minecraft:iron_sword" },
+        "D": { "item": "minecraft:diamond" },
+        "R": { "item": "minecraft:redstone" }
+    },
+    "result": {
+        "item": "advancedsorter:mob_grinder",
+        "count": 1
+    }
+}

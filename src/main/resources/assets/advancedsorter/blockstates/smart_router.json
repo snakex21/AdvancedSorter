@@ -1,0 +1,6 @@
+{
+    "variants": {
+        "normal": { "model": "advancedsorter:smart_router" },
+        "inventory": { "model": "advancedsorter:smart_router" }
+    }
+}

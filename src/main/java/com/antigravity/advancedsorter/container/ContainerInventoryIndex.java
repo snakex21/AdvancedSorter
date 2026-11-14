@@ -17,6 +17,11 @@ public class ContainerInventoryIndex extends Container {
     public ContainerInventoryIndex(InventoryPlayer playerInv, TileInventoryIndex tile) {
         this.tile = tile;
 
+        // OPTYMALIZACJA: Powiadom tile że gracz otworzył GUI
+        if (!tile.getWorld().isRemote) {
+            tile.onPlayerOpenGui();
+        }
+
         IItemHandler handler = tile.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null);
 
         // Position of the Output Buffer slots (3x3 grid)
@@ -46,6 +51,15 @@ public class ContainerInventoryIndex extends Container {
     @Override
     public boolean canInteractWith(EntityPlayer playerIn) {
         return !playerIn.isSpectator();
+    }
+
+    @Override
+    public void onContainerClosed(EntityPlayer playerIn) {
+        super.onContainerClosed(playerIn);
+        // OPTYMALIZACJA: Powiadom tile że gracz zamknął GUI
+        if (!tile.getWorld().isRemote) {
+            tile.onPlayerCloseGui();
+        }
     }
 
     @Override

@@ -1,0 +1,27 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "III",
+        "WGL",
+        "III"
+    ],
+    "key": {
+        "I": {
+            "type": "forge:ore_dict",
+            "ore": "ingotIron"
+        },
+        "W": {
+            "item": "minecraft:water_bucket"
+        },
+        "L": {
+            "item": "minecraft:lava_bucket"
+        },
+        "G": {
+            "type": "forge:ore_dict",
+            "ore": "blockGlass"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:cobble_generator"
+    }
+}

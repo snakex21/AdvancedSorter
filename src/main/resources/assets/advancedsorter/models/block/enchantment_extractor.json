@@ -1,0 +1,9 @@
+{
+  "parent": "block/orientable",
+  "textures": {
+    "top": "minecraft:blocks/enchanting_table_top",
+    "bottom": "minecraft:blocks/iron_block",
+    "front": "minecraft:blocks/piston_top_sticky",
+    "side": "minecraft:blocks/furnace_side"
+  }
+}

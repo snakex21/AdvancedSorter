@@ -20,21 +20,35 @@ public class TileFluidOutlet extends TileEntity implements ITickable, IFluidSync
 
     private final SyncingFluidTank tank = new SyncingFluidTank(2000, this);
 
+    // OPTYMALIZACJA: Sleep timer gdy nie można znaleźć miejsca
+    private int sleepTimer = 0;
+    private static final int SLEEP_DURATION = 20; // Śpij 1 sekundę gdy brak miejsca
+
     @Override
     public void update() {
         if (world.isRemote)
             return;
+
+        // OPTYMALIZACJA: Jeśli śpimy, tylko zmniejsz licznik
+        if (sleepTimer > 0) {
+            sleepTimer--;
+            return;
+        }
 
         // Try to place multiple blocks per tick if we have enough fluid
         // This makes it feel like it's flowing at the speed of the pipe (e.g. diamond
         // pipe)
         int blocksToPlace = Math.min(tank.getFluidAmount() / 1000, 10); // Up to 10 blocks per tick
         if (blocksToPlace > 0) {
-            tryPlaceMultipleFluids(blocksToPlace);
+            boolean placed = tryPlaceMultipleFluids(blocksToPlace);
+            // Jeśli nie udało się umieścić żadnego bloku - śpij
+            if (!placed) {
+                sleepTimer = SLEEP_DURATION;
+            }
         }
     }
 
-    private void tryPlaceMultipleFluids(int count) {
+    private boolean tryPlaceMultipleFluids(int count) {
         IBlockState state = world.getBlockState(pos);
         if (state.getBlock() instanceof BlockFluidOutlet) {
             EnumFacing facing = state.getValue(BlockFluidOutlet.FACING);
@@ -46,62 +60,78 @@ public class TileFluidOutlet extends TileEntity implements ITickable, IFluidSync
                     Fluid fluid = fluidStack.getFluid();
                     Block fluidBlock = fluid.getBlock();
                     if (fluidBlock != null) {
+                        boolean anyPlaced = false;
                         for (BlockPos targetPos : targets) {
                             if (tank.getFluidAmount() >= 1000) {
                                 world.setBlockState(targetPos, fluidBlock.getDefaultState(), 3);
                                 tank.drain(1000, true);
+                                anyPlaced = true;
                             }
                         }
+                        return anyPlaced;
                     }
                 }
             }
         }
+        return false; // Nie udało się nic umieścić
     }
+
+    // OPTYMALIZACJA: Reużywalne kolekcje dla BFS
+    private final Queue<BlockPos> bfsQueue = new LinkedList<>();
+    private final Set<BlockPos> bfsVisited = new HashSet<>();
+    private final List<BlockPos> bfsLowestPositions = new ArrayList<>();
 
     private List<BlockPos> findLowestEmptyBlocks(EnumFacing facing, int maxCount) {
         BlockPos startPos = pos.offset(facing);
         if (world.isOutsideBuildHeight(startPos))
             return Collections.emptyList();
 
-        Queue<BlockPos> queue = new LinkedList<>();
-        Set<BlockPos> visited = new HashSet<>();
-        List<BlockPos> lowestPositions = new ArrayList<>();
+        // Clear reused collections
+        bfsQueue.clear();
+        bfsVisited.clear();
+        bfsLowestPositions.clear();
 
-        queue.add(startPos);
-        visited.add(startPos);
+        bfsQueue.add(startPos);
+        bfsVisited.add(startPos);
 
         int lowestY = pos.getY() + 1;
         int checkedCount = 0;
-        int maxChecks = 5000;
+        int maxChecks = 1000; // Zmniejszono z 5000 dla wydajności
 
         FluidStack tankFluid = tank.getFluid();
         if (tankFluid == null)
             return Collections.emptyList();
         Block targetFluidBlock = tankFluid.getFluid().getBlock();
 
-        while (!queue.isEmpty() && checkedCount < maxChecks) {
-            BlockPos current = queue.poll();
+        while (!bfsQueue.isEmpty() && checkedCount < maxChecks) {
+            BlockPos current = bfsQueue.poll();
             checkedCount++;
 
             if (isValidFluidPlacement(current)) {
                 if (current.getY() < lowestY) {
                     lowestY = current.getY();
-                    lowestPositions.clear();
-                    lowestPositions.add(current);
+                    bfsLowestPositions.clear();
+                    bfsLowestPositions.add(current);
                 } else if (current.getY() == lowestY) {
-                    lowestPositions.add(current);
+                    bfsLowestPositions.add(current);
                 }
             }
 
-            if (lowestPositions.size() >= maxCount * 2 && lowestY < pos.getY()) {
+            if (bfsLowestPositions.size() >= maxCount * 2 && lowestY < pos.getY()) {
                 break;
             }
 
             for (EnumFacing dir : EnumFacing.VALUES) {
                 BlockPos neighbor = current.offset(dir);
-                if (!visited.contains(neighbor) && !world.isOutsideBuildHeight(neighbor)) {
+                // Sprawdź czy już odwiedzono zanim sprawdzisz isOutsideBuildHeight (szybsze)
+                if (bfsVisited.contains(neighbor)) continue;
+
+                if (!world.isOutsideBuildHeight(neighbor)) {
                     if (neighbor.distanceSq(pos) > 64 * 64)
                         continue;
+
+                    // Add to visited immediately
+                    bfsVisited.add(neighbor);
 
                     IBlockState nState = world.getBlockState(neighbor);
                     boolean passable = world.isAirBlock(neighbor) || nState.getBlock().isReplaceable(world, neighbor);
@@ -110,18 +140,23 @@ public class TileFluidOutlet extends TileEntity implements ITickable, IFluidSync
                     }
 
                     if (passable) {
-                        visited.add(neighbor);
-                        queue.add(neighbor);
+                        bfsQueue.add(neighbor);
                     }
                 }
             }
         }
 
-        if (lowestPositions.isEmpty())
+        if (bfsLowestPositions.isEmpty())
             return Collections.emptyList();
 
-        Collections.shuffle(lowestPositions);
-        return lowestPositions.subList(0, Math.min(lowestPositions.size(), maxCount));
+        // Zamiast Collections.shuffle co tworzy nową listę/tablicę, weź pierwsze N
+        // Opcjonalnie można losować w prostszy sposób jeśli to potrzebne dla estetyki
+        // Ale dla wydajności bierzemy po kolei.
+        List<BlockPos> result = new ArrayList<>(Math.min(bfsLowestPositions.size(), maxCount));
+        for (int i = 0; i < Math.min(bfsLowestPositions.size(), maxCount); i++) {
+             result.add(bfsLowestPositions.get(i));
+        }
+        return result;
     }
 
     private boolean isValidFluidPlacement(BlockPos checkPos) {

@@ -1,0 +1,34 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "OGO",
+        "WDL",
+        "OIO"
+    ],
+    "key": {
+        "O": {
+            "item": "minecraft:obsidian"
+        },
+        "G": {
+            "type": "forge:ore_dict",
+            "ore": "blockGlass"
+        },
+        "W": {
+            "item": "minecraft:water_bucket"
+        },
+        "L": {
+            "item": "minecraft:lava_bucket"
+        },
+        "D": {
+            "type": "forge:ore_dict",
+            "ore": "gemDiamond"
+        },
+        "I": {
+            "type": "forge:ore_dict",
+            "ore": "blockIron"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:obsidian_generator"
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "ODO",
+        "DLD",
+        "ODO"
+    ],
+    "key": {
+        "O": { "item": "minecraft:obsidian" },
+        "D": { "item": "minecraft:diamond_block" },
+        "L": { "item": "minecraft:nether_star" }
+    },
+    "result": {
+        "item": "advancedsorter:void_miner",
+        "count": 1
+    }
+}

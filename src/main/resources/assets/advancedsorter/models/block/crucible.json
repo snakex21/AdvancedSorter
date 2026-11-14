@@ -1,0 +1,8 @@
+{
+  "parent": "block/cube_bottom_top",
+  "textures": {
+    "top": "advancedsorter:blocks/crucible/crucible_top",
+    "bottom": "advancedsorter:blocks/crucible/crucible_bottom",
+    "side": "advancedsorter:blocks/crucible/crucible_side"
+  }
+}

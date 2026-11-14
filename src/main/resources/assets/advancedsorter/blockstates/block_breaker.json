@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "advancedsorter:block_breaker" },
+    "facing=south": { "model": "advancedsorter:block_breaker", "y": 180 },
+    "facing=west":  { "model": "advancedsorter:block_breaker", "y": 270 },
+    "facing=east":  { "model": "advancedsorter:block_breaker", "y": 90 },
+    "facing=up":    { "model": "advancedsorter:block_breaker", "x": 270 },
+    "facing=down":  { "model": "advancedsorter:block_breaker", "x": 90 }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "parent": "block/orientable",
+  "textures": {
+    "top": "advancedsorter:blocks/flint_maker/flint_maker_top",
+    "front": "advancedsorter:blocks/flint_maker/flint_maker_front",
+    "side": "advancedsorter:blocks/flint_maker/flint_maker_side",
+    "bottom": "minecraft:blocks/iron_block"
+  }
+}

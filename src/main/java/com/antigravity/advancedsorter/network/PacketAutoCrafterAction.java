@@ -28,6 +28,7 @@ public class PacketAutoCrafterAction implements IMessage {
     public static final int ACTION_REMOVE_FROM_AUTOMATION = 6;
     public static final int ACTION_SET_RESULT = 7;
     public static final int ACTION_TOGGLE_MODE = 8;
+    public static final int ACTION_SET_LIMIT = 9;
 
     private BlockPos pos;
     private int action;
@@ -84,6 +85,10 @@ public class PacketAutoCrafterAction implements IMessage {
 
     public static PacketAutoCrafterAction toggleMode(BlockPos pos) {
         return new PacketAutoCrafterAction(pos, ACTION_TOGGLE_MODE, 0, 0, ItemStack.EMPTY);
+    }
+
+    public static PacketAutoCrafterAction setLimit(BlockPos pos, ItemStack stack, int limit) {
+        return new PacketAutoCrafterAction(pos, ACTION_SET_LIMIT, 0, limit, stack);
     }
 
     @Override
@@ -232,6 +237,14 @@ public class PacketAutoCrafterAction implements IMessage {
                         crafter.setRoundRobinMode(!crafter.isRoundRobinMode());
                         player.sendMessage(new net.minecraft.util.text.TextComponentString(
                             crafter.isRoundRobinMode() ? "§aTryb: Cykliczny (Round-Robin)" : "§eTryb: Priorytetowy (1->2->3)"));
+                        break;
+
+                    case ACTION_SET_LIMIT:
+                        if (!message.resultStack.isEmpty()) {
+                            crafter.setItemLimit(message.resultStack, message.amount);
+                            player.sendMessage(new net.minecraft.util.text.TextComponentString(
+                                "§aUstawiono limit dla " + message.resultStack.getDisplayName() + ": " + message.amount));
+                        }
                         break;
                 }
             });

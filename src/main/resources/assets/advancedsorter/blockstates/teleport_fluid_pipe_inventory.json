@@ -1,0 +1,5 @@
+{
+    "variants": {
+        "inventory": { "model": "advancedsorter:teleport_fluid_pipe_core" }
+    }
+}

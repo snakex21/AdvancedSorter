@@ -1,0 +1,35 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "PDP",
+        "RCR",
+        "IOI"
+    ],
+    "key": {
+        "P": {
+            "item": "minecraft:piston"
+        },
+        "D": {
+            "item": "minecraft:diamond_pickaxe",
+            "data": 32767
+        },
+        "R": {
+            "type": "forge:ore_dict",
+            "ore": "dustRedstone"
+        },
+        "C": {
+            "item": "minecraft:crafting_table"
+        },
+        "I": {
+            "type": "forge:ore_dict",
+            "ore": "ingotIron"
+        },
+        "O": {
+            "type": "forge:ore_dict",
+            "ore": "obsidian"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:deconstructor"
+    }
+}

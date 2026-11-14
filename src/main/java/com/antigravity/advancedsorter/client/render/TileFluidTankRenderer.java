@@ -25,29 +25,71 @@ public class TileFluidTankRenderer extends TileEntitySpecialRenderer<TileFluidTa
     private static final float MIN_Y = 2.01f / 16f;
     private static final float MAX_Y = 13.99f / 16f;
 
+    // Client-side cache to prevent flickering and redundant calculations
+    private static class TankCache {
+        float r, g, b;
+        float fillLevel;
+        Fluid fluid;
+        TextureAtlasSprite sprite;
+        long lastUpdateTime;
+
+        TankCache(Fluid fluid, TextureAtlasSprite sprite, float r, float g, float b, float fillLevel) {
+            this.fluid = fluid;
+            this.sprite = sprite;
+            this.r = r;
+            this.g = g;
+            this.b = b;
+            this.fillLevel = fillLevel;
+            this.lastUpdateTime = System.currentTimeMillis();
+        }
+    }
+
+    private static final java.util.Map<Long, TankCache> tankCache = new java.util.HashMap<>();
+
     @Override
     public void render(TileFluidTank te, double x, double y, double z, float partialTicks, int destroyStage, float alpha) {
+        long posKey = te.getPos().toLong();
         FluidStack fluidStack = te.getTank().getFluid();
+        TankCache cache = tankCache.get(posKey);
 
-        if (fluidStack == null || fluidStack.amount <= 0 || fluidStack.getFluid() == null) {
+        float r, g, b, a, fillLevel;
+        Fluid fluid;
+        TextureAtlasSprite stillSprite;
+
+        // Update cache if we have new fluid data
+        if (fluidStack != null && fluidStack.amount > 0 && fluidStack.getFluid() != null) {
+            fluid = fluidStack.getFluid();
+            fillLevel = (float) fluidStack.amount / te.getTank().getCapacity();
+            fillLevel = Math.min(1.0f, Math.max(0.01f, fillLevel)); // At least 1% visible
+
+            int color = fluid.getColor(fluidStack);
+            r = ((color >> 16) & 0xFF) / 255.0f;
+            g = ((color >> 8) & 0xFF) / 255.0f;
+            b = (color & 0xFF) / 255.0f;
+
+            stillSprite = getFluidStillSprite(fluid);
+
+            // Update cache
+            tankCache.put(posKey, new TankCache(fluid, stillSprite, r, g, b, fillLevel));
+        } else if (cache != null) {
+            // No current fluid data, but we have cache - use cached values
+            // Only clear cache if fluid is truly empty
+            if (fluidStack != null && fluidStack.amount == 0) {
+                tankCache.remove(posKey);
+                return;
+            }
+            r = cache.r;
+            g = cache.g;
+            b = cache.b;
+            fillLevel = cache.fillLevel;
+            fluid = cache.fluid;
+            stillSprite = cache.sprite;
+        } else {
             return;
         }
 
-        Fluid fluid = fluidStack.getFluid();
-        float fillLevel = (float) fluidStack.amount / te.getTank().getCapacity();
-        fillLevel = Math.min(1.0f, Math.max(0.01f, fillLevel)); // At least 1% visible
-
-        int color = fluid.getColor(fluidStack);
-        float r = ((color >> 16) & 0xFF) / 255.0f;
-        float g = ((color >> 8) & 0xFF) / 255.0f;
-        float b = (color & 0xFF) / 255.0f;
-        float a = 0.9f;
-
-        // Calculate fluid height based on fill level
+        a = 0.9f;
         float fluidTop = MIN_Y + (MAX_Y - MIN_Y) * fillLevel;
-
-        // Get fluid texture
-        TextureAtlasSprite stillSprite = getFluidStillSprite(fluid);
 
         GlStateManager.pushMatrix();
         GlStateManager.translate(x, y, z);
@@ -71,7 +113,8 @@ public class TileFluidTankRenderer extends TileEntitySpecialRenderer<TileFluidTa
         float v2 = stillSprite.getMaxV();
 
         // Scale UV to match the visible area
-        float uvScale = (MAX_XZ - MIN_XZ);
+        // Note: Using pre-calculated UVs or simpler scaling avoids dependent texture reads if possible,
+        // but getInterpolated is fine here as it's just math.
         float u1Scaled = stillSprite.getInterpolatedU(2);
         float v1Scaled = stillSprite.getInterpolatedV(2);
         float u2Scaled = stillSprite.getInterpolatedU(14);
@@ -121,6 +164,13 @@ public class TileFluidTankRenderer extends TileEntitySpecialRenderer<TileFluidTa
         GlStateManager.enableLighting();
         GlStateManager.disableBlend();
         GlStateManager.popMatrix();
+    }
+
+    /**
+     * Clear the cache for a specific position (called when tank is broken)
+     */
+    public static void clearCache(long posKey) {
+        tankCache.remove(posKey);
     }
 
     private TextureAtlasSprite getFluidStillSprite(Fluid fluid) {

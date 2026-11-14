@@ -33,10 +33,12 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
         float r, g, b;
         float fillLevel;
         Gas gas;
+        TextureAtlasSprite sprite;
         long lastUpdateTime;
 
-        GasCache(Gas gas, float r, float g, float b, float fillLevel) {
+        GasCache(Gas gas, TextureAtlasSprite sprite, float r, float g, float b, float fillLevel) {
             this.gas = gas;
+            this.sprite = sprite;
             this.r = r;
             this.g = g;
             this.b = b;
@@ -58,6 +60,7 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
 
         float r, g, b, a, fillLevel;
         Gas gas;
+        TextureAtlasSprite sprite;
 
         // Update cache if we have new gas data
         if (gasStack != null && gasStack.amount > 0 && gasStack.getGas() != null) {
@@ -70,8 +73,11 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
             g = ((color >> 8) & 0xFF) / 255.0f;
             b = (color & 0xFF) / 255.0f;
 
+            // Get gas texture
+            sprite = getGasSprite(gas);
+
             // Update cache
-            gasCache.put(posKey, new GasCache(gas, r, g, b, fillLevel));
+            gasCache.put(posKey, new GasCache(gas, sprite, r, g, b, fillLevel));
         } else if (cache != null) {
             // No current gas data, but we have cache - use cached values
             // Only clear cache if gas is truly empty (amount == 0, not just null during sync)
@@ -86,15 +92,13 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
             b = cache.b;
             fillLevel = cache.fillLevel;
             gas = cache.gas;
+            sprite = cache.sprite;
         } else {
             // No gas and no cache - nothing to render
             return;
         }
 
         a = 0.75f; // Transparency
-
-        // Get gas texture
-        TextureAtlasSprite sprite = getGasSprite(gas);
 
         GlStateManager.pushMatrix();
         GlStateManager.translate(x, y, z);
@@ -104,18 +108,26 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
         GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
         GlStateManager.disableLighting();
         GlStateManager.depthMask(false);
-        GlStateManager.color(r, g, b, a);
+        // GlStateManager.color is not needed if we provide color in vertex format, but good practice to reset
+        GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
 
         // Bind texture atlas
         Minecraft.getMinecraft().getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 
+        // OPTYMALIZACJA: Batching draw calls
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.getBuffer();
+        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR);
+
         // Draw gas in connections (arms going to edge of block)
         for (EnumFacing face : te.getConnections()) {
-            drawConnectionGas(face, fillLevel, r, g, b, a, sprite);
+            drawConnectionGas(buffer, face, fillLevel, r, g, b, a, sprite);
         }
 
         // Draw gas indicators on the core (small patches on each visible face)
-        drawCoreGasIndicators(te, fillLevel, r, g, b, a, sprite);
+        drawCoreGasIndicators(buffer, te, fillLevel, r, g, b, a, sprite);
+
+        tessellator.draw();
 
         GlStateManager.depthMask(true);
         GlStateManager.enableLighting();
@@ -123,10 +135,8 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
         GlStateManager.popMatrix();
     }
 
-    private void drawCoreGasIndicators(TileTeleportGasPipe te, float fillLevel,
+    private void drawCoreGasIndicators(BufferBuilder buffer, TileTeleportGasPipe te, float fillLevel,
             float r, float g, float b, float a, TextureAtlasSprite sprite) {
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.getBuffer();
 
         float u1 = sprite.getMinU();
         float v1 = sprite.getMinV();
@@ -145,8 +155,6 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
 
         // Offset to render just outside the pipe model
         float offset = 0.001f;
-
-        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR);
 
         // Draw on faces that don't have connections
         if (!te.getConnections().contains(EnumFacing.NORTH)) {
@@ -202,14 +210,10 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
             buffer.pos(indicatorMax, y1, indicatorMin).tex(u2s, v1).color(r, g, b, a).endVertex();
             buffer.pos(indicatorMax, y1, indicatorMax).tex(u2s, v2full).color(r, g, b, a).endVertex();
         }
-
-        tessellator.draw();
     }
 
-    private void drawConnectionGas(EnumFacing face, float fillLevel,
+    private void drawConnectionGas(BufferBuilder buffer, EnumFacing face, float fillLevel,
             float r, float g, float b, float a, TextureAtlasSprite sprite) {
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.getBuffer();
 
         float u1 = sprite.getMinU();
         float v1 = sprite.getMinV();
@@ -220,8 +224,6 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
         float armMin = 0.30f;
         float armMax = 0.70f;
         float armHeight = armMin + (armMax - armMin) * fillLevel;
-
-        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR);
 
         switch (face) {
             case DOWN:
@@ -290,8 +292,6 @@ public class TileTeleportGasPipeRenderer extends TileEntitySpecialRenderer<TileT
                         EnumFacing.Axis.X);
                 break;
         }
-
-        tessellator.draw();
     }
 
     private void drawArmSidesGeneric(BufferBuilder buffer, float min, float max, float h1, float h2, float d1, float d2,

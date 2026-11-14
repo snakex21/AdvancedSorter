@@ -79,6 +79,7 @@ public class TileFluidTank extends TileEntity implements ITickable, IFluidSyncab
 
     // Optimization: Tick skipping and neighbor caching
     private int tickCounter = 0;
+    private int sleepTimer = 0;
     private final Map<EnumFacing, IFluidHandler> cachedNeighbors = new EnumMap<>(EnumFacing.class);
     private int neighborCacheCooldown = 0;
 
@@ -118,6 +119,11 @@ public class TileFluidTank extends TileEntity implements ITickable, IFluidSyncab
         if (world == null || world.isRemote)
             return;
 
+        if (sleepTimer > 0) {
+            sleepTimer--;
+            return;
+        }
+
         tickCounter++;
 
         // Refresh neighbor cache every 100 ticks (5 seconds) to handle block updates
@@ -130,8 +136,13 @@ public class TileFluidTank extends TileEntity implements ITickable, IFluidSyncab
 
         // Tick Skipping: Only push fluid every 5 ticks (4 times per second)
         // This reduces CPU load by 80% for transfer operations
-        if (tickCounter % 5 == 0 && cachedOutputCount > 0 && tank.getFluidAmount() > 0) {
-            pushFluid();
+        if (tickCounter % 5 == 0) {
+            if (cachedOutputCount > 0 && tank.getFluidAmount() > 0) {
+                pushFluid();
+            } else if (tank.getFluidAmount() <= 0) {
+                // Jeśli zbiornik jest pusty, nie musimy tykać tak często
+                sleepTimer = 20;
+            }
         }
 
         // Handle sync request with rate limiting
@@ -173,9 +184,6 @@ public class TileFluidTank extends TileEntity implements ITickable, IFluidSyncab
                         int filled = handler.fill(toDrain, true);
                         if (filled > 0) {
                             tank.drain(filled, true);
-                        } else {
-                            // If filling failed completely, maybe the neighbor is full or invalid
-                            // We keep it in cache until the 5-second refresh cycle
                         }
                     }
                 }

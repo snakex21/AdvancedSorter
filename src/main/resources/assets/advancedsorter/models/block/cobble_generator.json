@@ -1,0 +1,8 @@
+{
+  "parent": "block/cube_bottom_top",
+  "textures": {
+    "top": "advancedsorter:blocks/cobble_generator/cobble_generator_top",
+    "bottom": "advancedsorter:blocks/cobble_generator/cobble_generator_bottom",
+    "side": "advancedsorter:blocks/cobble_generator/cobble_generator_side"
+  }
+}

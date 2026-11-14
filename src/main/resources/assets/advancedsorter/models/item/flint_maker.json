@@ -1,0 +1,11 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "up": "advancedsorter:blocks/flint_maker/flint_maker_top",
+    "down": "minecraft:blocks/iron_block",
+    "north": "advancedsorter:blocks/flint_maker/flint_maker_front",
+    "south": "advancedsorter:blocks/flint_maker/flint_maker_side",
+    "east": "advancedsorter:blocks/flint_maker/flint_maker_side",
+    "west": "advancedsorter:blocks/flint_maker/flint_maker_side"
+  }
+}

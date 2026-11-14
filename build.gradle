@@ -10,7 +10,7 @@ buildscript {
 }
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = "2.0.0"
+version = "2.1.0"
 group = "com.antigravity.advancedsorter"
 archivesBaseName = "advancedsorter"
 
@@ -31,6 +31,9 @@ repositories {
 dependencies {
     // Mekanism API for gas pipes
     deobfCompile "curse.maven:mekanism-268560:2835175"
+
+    // IC2 Support (using standard IC2 dependency which shares API with Classic)
+    deobfCompile "curse.maven:industrial-craft-242638:3078604"
 }
 
 processResources {

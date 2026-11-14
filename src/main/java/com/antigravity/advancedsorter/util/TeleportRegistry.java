@@ -22,6 +22,38 @@ public class TeleportRegistry extends WorldSavedData {
     private final Map<Integer, List<TeleportLocation>> fluidPipesByFrequency = new HashMap<>();
     private final Map<Integer, List<TeleportLocation>> gasPipesByFrequency = new HashMap<>();
 
+    // CACHE: Unikamy tworzenia nowych list co tick
+    private final Map<Integer, List<TeleportLocation>> receiversCache = new HashMap<>();
+    private final Map<Integer, List<TeleportLocation>> sendersCache = new HashMap<>();
+    private final Map<Integer, List<TeleportLocation>> fluidReceiversCache = new HashMap<>();
+    private final Map<Integer, List<TeleportLocation>> fluidSendersCache = new HashMap<>();
+    private final Map<Integer, List<TeleportLocation>> gasReceiversCache = new HashMap<>();
+    private final Map<Integer, List<TeleportLocation>> gasSendersCache = new HashMap<>();
+
+    private void invalidateItemCache(int frequency) {
+        receiversCache.remove(frequency);
+        sendersCache.remove(frequency);
+    }
+
+    private void invalidateFluidCache(int frequency) {
+        fluidReceiversCache.remove(frequency);
+        fluidSendersCache.remove(frequency);
+    }
+
+    private void invalidateGasCache(int frequency) {
+        gasReceiversCache.remove(frequency);
+        gasSendersCache.remove(frequency);
+    }
+
+    private void invalidateAllCaches() {
+        receiversCache.clear();
+        sendersCache.clear();
+        fluidReceiversCache.clear();
+        fluidSendersCache.clear();
+        gasReceiversCache.clear();
+        gasSendersCache.clear();
+    }
+
     public TeleportRegistry() {
         super(DATA_NAME);
     }
@@ -132,24 +164,40 @@ public class TeleportRegistry extends WorldSavedData {
     // ========== Item Pipe Methods ==========
 
     public void registerPipe(int frequency, int dimension, BlockPos pos, boolean canSend, boolean canReceive) {
-        removePipe(pos, dimension); // Remove old entry if exists
+        removePipeInternal(pos, dimension); // Remove old entry if exists
 
         pipesByFrequency.computeIfAbsent(frequency, k -> new ArrayList<>())
                 .add(new TeleportLocation(dimension, pos, canSend, canReceive));
+        invalidateItemCache(frequency);
         markDirty();
     }
 
     public void removePipe(BlockPos pos, int dimension) {
-        for (List<TeleportLocation> locations : pipesByFrequency.values()) {
-            locations.removeIf(loc -> loc.pos.equals(pos) && loc.dimension == dimension);
-        }
+        removePipeInternal(pos, dimension);
         markDirty();
     }
 
+    private void removePipeInternal(BlockPos pos, int dimension) {
+        for (Map.Entry<Integer, List<TeleportLocation>> entry : pipesByFrequency.entrySet()) {
+            int sizeBefore = entry.getValue().size();
+            entry.getValue().removeIf(loc -> loc.pos.equals(pos) && loc.dimension == dimension);
+            if (entry.getValue().size() != sizeBefore) {
+                invalidateItemCache(entry.getKey());
+            }
+        }
+    }
+
     public List<TeleportLocation> getReceivers(int frequency) {
+        // Sprawdź cache
+        List<TeleportLocation> cached = receiversCache.get(frequency);
+        if (cached != null) {
+            return cached;
+        }
+
         List<TeleportLocation> all = pipesByFrequency.get(frequency);
-        if (all == null)
+        if (all == null || all.isEmpty()) {
             return Collections.emptyList();
+        }
 
         List<TeleportLocation> receivers = new ArrayList<>();
         for (TeleportLocation loc : all) {
@@ -157,13 +205,23 @@ public class TeleportRegistry extends WorldSavedData {
                 receivers.add(loc);
             }
         }
-        return receivers;
+        // Cache wynik jako immutable
+        List<TeleportLocation> result = Collections.unmodifiableList(receivers);
+        receiversCache.put(frequency, result);
+        return result;
     }
 
     public List<TeleportLocation> getSenders(int frequency) {
+        // Sprawdź cache
+        List<TeleportLocation> cached = sendersCache.get(frequency);
+        if (cached != null) {
+            return cached;
+        }
+
         List<TeleportLocation> all = pipesByFrequency.get(frequency);
-        if (all == null)
+        if (all == null || all.isEmpty()) {
             return Collections.emptyList();
+        }
 
         List<TeleportLocation> senders = new ArrayList<>();
         for (TeleportLocation loc : all) {
@@ -171,30 +229,48 @@ public class TeleportRegistry extends WorldSavedData {
                 senders.add(loc);
             }
         }
-        return senders;
+        // Cache wynik jako immutable
+        List<TeleportLocation> result = Collections.unmodifiableList(senders);
+        sendersCache.put(frequency, result);
+        return result;
     }
 
     // ========== Fluid Pipe Methods ==========
 
     public void registerFluidPipe(int frequency, int dimension, BlockPos pos, boolean canSend, boolean canReceive) {
-        removeFluidPipe(pos, dimension);
+        removeFluidPipeInternal(pos, dimension);
 
         fluidPipesByFrequency.computeIfAbsent(frequency, k -> new ArrayList<>())
                 .add(new TeleportLocation(dimension, pos, canSend, canReceive));
+        invalidateFluidCache(frequency);
         markDirty();
     }
 
     public void removeFluidPipe(BlockPos pos, int dimension) {
-        for (List<TeleportLocation> locations : fluidPipesByFrequency.values()) {
-            locations.removeIf(loc -> loc.pos.equals(pos) && loc.dimension == dimension);
-        }
+        removeFluidPipeInternal(pos, dimension);
         markDirty();
     }
 
+    private void removeFluidPipeInternal(BlockPos pos, int dimension) {
+        for (Map.Entry<Integer, List<TeleportLocation>> entry : fluidPipesByFrequency.entrySet()) {
+            int sizeBefore = entry.getValue().size();
+            entry.getValue().removeIf(loc -> loc.pos.equals(pos) && loc.dimension == dimension);
+            if (entry.getValue().size() != sizeBefore) {
+                invalidateFluidCache(entry.getKey());
+            }
+        }
+    }
+
     public List<TeleportLocation> getFluidReceivers(int frequency) {
+        List<TeleportLocation> cached = fluidReceiversCache.get(frequency);
+        if (cached != null) {
+            return cached;
+        }
+
         List<TeleportLocation> all = fluidPipesByFrequency.get(frequency);
-        if (all == null)
+        if (all == null || all.isEmpty()) {
             return Collections.emptyList();
+        }
 
         List<TeleportLocation> receivers = new ArrayList<>();
         for (TeleportLocation loc : all) {
@@ -202,13 +278,21 @@ public class TeleportRegistry extends WorldSavedData {
                 receivers.add(loc);
             }
         }
-        return receivers;
+        List<TeleportLocation> result = Collections.unmodifiableList(receivers);
+        fluidReceiversCache.put(frequency, result);
+        return result;
     }
 
     public List<TeleportLocation> getFluidSenders(int frequency) {
+        List<TeleportLocation> cached = fluidSendersCache.get(frequency);
+        if (cached != null) {
+            return cached;
+        }
+
         List<TeleportLocation> all = fluidPipesByFrequency.get(frequency);
-        if (all == null)
+        if (all == null || all.isEmpty()) {
             return Collections.emptyList();
+        }
 
         List<TeleportLocation> senders = new ArrayList<>();
         for (TeleportLocation loc : all) {
@@ -216,7 +300,9 @@ public class TeleportRegistry extends WorldSavedData {
                 senders.add(loc);
             }
         }
-        return senders;
+        List<TeleportLocation> result = Collections.unmodifiableList(senders);
+        fluidSendersCache.put(frequency, result);
+        return result;
     }
 
     public Set<Integer> getFluidFrequencies() {
@@ -230,24 +316,39 @@ public class TeleportRegistry extends WorldSavedData {
     // ========== Gas Pipe Methods ==========
 
     public void registerGasPipe(int frequency, int dimension, BlockPos pos, boolean canSend, boolean canReceive) {
-        removeGasPipe(pos, dimension);
+        removeGasPipeInternal(pos, dimension);
 
         gasPipesByFrequency.computeIfAbsent(frequency, k -> new ArrayList<>())
                 .add(new TeleportLocation(dimension, pos, canSend, canReceive));
+        invalidateGasCache(frequency);
         markDirty();
     }
 
     public void removeGasPipe(BlockPos pos, int dimension) {
-        for (List<TeleportLocation> locations : gasPipesByFrequency.values()) {
-            locations.removeIf(loc -> loc.pos.equals(pos) && loc.dimension == dimension);
-        }
+        removeGasPipeInternal(pos, dimension);
         markDirty();
     }
 
+    private void removeGasPipeInternal(BlockPos pos, int dimension) {
+        for (Map.Entry<Integer, List<TeleportLocation>> entry : gasPipesByFrequency.entrySet()) {
+            int sizeBefore = entry.getValue().size();
+            entry.getValue().removeIf(loc -> loc.pos.equals(pos) && loc.dimension == dimension);
+            if (entry.getValue().size() != sizeBefore) {
+                invalidateGasCache(entry.getKey());
+            }
+        }
+    }
+
     public List<TeleportLocation> getGasReceivers(int frequency) {
+        List<TeleportLocation> cached = gasReceiversCache.get(frequency);
+        if (cached != null) {
+            return cached;
+        }
+
         List<TeleportLocation> all = gasPipesByFrequency.get(frequency);
-        if (all == null)
+        if (all == null || all.isEmpty()) {
             return Collections.emptyList();
+        }
 
         List<TeleportLocation> receivers = new ArrayList<>();
         for (TeleportLocation loc : all) {
@@ -255,13 +356,21 @@ public class TeleportRegistry extends WorldSavedData {
                 receivers.add(loc);
             }
         }
-        return receivers;
+        List<TeleportLocation> result = Collections.unmodifiableList(receivers);
+        gasReceiversCache.put(frequency, result);
+        return result;
     }
 
     public List<TeleportLocation> getGasSenders(int frequency) {
+        List<TeleportLocation> cached = gasSendersCache.get(frequency);
+        if (cached != null) {
+            return cached;
+        }
+
         List<TeleportLocation> all = gasPipesByFrequency.get(frequency);
-        if (all == null)
+        if (all == null || all.isEmpty()) {
             return Collections.emptyList();
+        }
 
         List<TeleportLocation> senders = new ArrayList<>();
         for (TeleportLocation loc : all) {
@@ -269,7 +378,9 @@ public class TeleportRegistry extends WorldSavedData {
                 senders.add(loc);
             }
         }
-        return senders;
+        List<TeleportLocation> result = Collections.unmodifiableList(senders);
+        gasSendersCache.put(frequency, result);
+        return result;
     }
 
     public Set<Integer> getGasFrequencies() {

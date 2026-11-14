@@ -33,10 +33,12 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
         float r, g, b;
         float fillLevel;
         Fluid fluid;
+        TextureAtlasSprite sprite;
         long lastUpdateTime;
 
-        FluidCache(Fluid fluid, float r, float g, float b, float fillLevel) {
+        FluidCache(Fluid fluid, TextureAtlasSprite sprite, float r, float g, float b, float fillLevel) {
             this.fluid = fluid;
+            this.sprite = sprite;
             this.r = r;
             this.g = g;
             this.b = b;
@@ -57,6 +59,7 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
 
         float r, g, b, a, fillLevel;
         Fluid fluid;
+        TextureAtlasSprite sprite;
 
         // Update cache if we have new fluid data
         if (fluidStack != null && fluidStack.amount > 0 && fluidStack.getFluid() != null) {
@@ -69,8 +72,11 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
             g = ((color >> 8) & 0xFF) / 255.0f;
             b = (color & 0xFF) / 255.0f;
 
+            // Get fluid texture
+            sprite = getFluidSprite(fluid);
+
             // Update cache
-            fluidCache.put(posKey, new FluidCache(fluid, r, g, b, fillLevel));
+            fluidCache.put(posKey, new FluidCache(fluid, sprite, r, g, b, fillLevel));
         } else if (cache != null) {
             // No current fluid data, but we have cache - use cached values
             // Only clear cache if fluid is truly empty (amount == 0, not just null during
@@ -86,15 +92,13 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
             b = cache.b;
             fillLevel = cache.fillLevel;
             fluid = cache.fluid;
+            sprite = cache.sprite;
         } else {
             // No fluid and no cache - nothing to render
             return;
         }
 
         a = 0.75f; // Transparency
-
-        // Get fluid texture
-        TextureAtlasSprite sprite = getFluidSprite(fluid);
 
         GlStateManager.pushMatrix();
         GlStateManager.translate(x, y, z);
@@ -104,18 +108,27 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
         GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
         GlStateManager.disableLighting();
         GlStateManager.depthMask(false);
-        GlStateManager.color(r, g, b, a);
+        // GlStateManager.color is not needed if we provide color in vertex format, but good practice to reset
+        GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
 
         // Bind texture atlas
         Minecraft.getMinecraft().getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 
+        // OPTYMALIZACJA: Batching draw calls
+        // Zamiast wywoływać draw() dla każdego ramienia, robimy to raz dla całej rury
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.getBuffer();
+        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR);
+
         // Draw fluid in connections (arms going to edge of block)
         for (EnumFacing face : te.getConnections()) {
-            drawConnectionFluid(face, fillLevel, r, g, b, a, sprite);
+            drawConnectionFluid(buffer, face, fillLevel, r, g, b, a, sprite);
         }
 
         // Draw fluid indicators on the core (small patches on each visible face)
-        drawCoreFluidIndicators(te, fillLevel, r, g, b, a, sprite);
+        drawCoreFluidIndicators(buffer, te, fillLevel, r, g, b, a, sprite);
+
+        tessellator.draw();
 
         GlStateManager.depthMask(true);
         GlStateManager.enableLighting();
@@ -123,10 +136,8 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
         GlStateManager.popMatrix();
     }
 
-    private void drawCoreFluidIndicators(TileFluidPipe te, float fillLevel,
+    private void drawCoreFluidIndicators(BufferBuilder buffer, TileFluidPipe te, float fillLevel,
             float r, float g, float b, float a, TextureAtlasSprite sprite) {
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.getBuffer();
 
         float u1 = sprite.getMinU();
         float v1 = sprite.getMinV();
@@ -145,8 +156,6 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
 
         // Offset to render just outside the pipe model
         float offset = 0.001f;
-
-        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR);
 
         // Draw on faces that don't have connections
         if (!te.getConnections().contains(EnumFacing.NORTH)) {
@@ -202,14 +211,10 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
             buffer.pos(indicatorMax, y1, indicatorMin).tex(u2s, v1).color(r, g, b, a).endVertex();
             buffer.pos(indicatorMax, y1, indicatorMax).tex(u2s, v2full).color(r, g, b, a).endVertex();
         }
-
-        tessellator.draw();
     }
 
-    private void drawConnectionFluid(EnumFacing face, float fillLevel,
+    private void drawConnectionFluid(BufferBuilder buffer, EnumFacing face, float fillLevel,
             float r, float g, float b, float a, TextureAtlasSprite sprite) {
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.getBuffer();
 
         float u1 = sprite.getMinU();
         float v1 = sprite.getMinV();
@@ -220,8 +225,6 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
         float armMin = 0.30f;
         float armMax = 0.70f;
         float armHeight = armMin + (armMax - armMin) * fillLevel;
-
-        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR);
 
         switch (face) {
             case DOWN:
@@ -290,8 +293,6 @@ public class TileFluidPipeRenderer extends TileEntitySpecialRenderer<TileFluidPi
                         EnumFacing.Axis.X);
                 break;
         }
-
-        tessellator.draw();
     }
 
     private void drawArmSides(BufferBuilder buffer, float min, float max, float y1, float y2,

@@ -67,6 +67,10 @@ public class TileDirectionalFluidPipe extends TileFluidPipe {
     private final List<String> allowedFluids = new ArrayList<>();
     private boolean isWhitelist = true; // true = only allow listed fluids, false = block listed fluids
 
+    // OPTYMALIZACJA: Reużywalna lista dla distributeFluid
+    private final List<EnumFacing> reusableOutputSides = new ArrayList<>();
+    private int roundRobinIndex = 0;
+
     public TileDirectionalFluidPipe() {
         super(FluidPipeTier.DIAMOND); // Directional pipes are high tier
         for (EnumFacing face : EnumFacing.VALUES) {
@@ -145,50 +149,73 @@ public class TileDirectionalFluidPipe extends TileFluidPipe {
     // ========== Transfer Logic ==========
 
     @Override
-    protected void distributeFluid() {
+    protected boolean distributeFluid() {
         if (tank.getFluidAmount() <= 0)
-            return;
+            return false;
 
         // Check if current fluid is allowed
         if (!isFluidAllowed(tank.getFluid())) {
-            return; // Don't transfer blocked fluids
+            return false; // Don't transfer blocked fluids
         }
 
         // Only distribute to OUTPUT sides
-        List<EnumFacing> outputSides = new ArrayList<>();
+        reusableOutputSides.clear();
         for (EnumFacing face : connections) {
             if (getSideMode(face) == SideMode.OUTPUT) {
-                outputSides.add(face);
+                reusableOutputSides.add(face);
             }
         }
 
-        if (outputSides.isEmpty())
-            return;
+        if (reusableOutputSides.isEmpty())
+            return false;
 
-        int amountPerSide = Math.min(tank.getFluidAmount(), tier.getTransferRate()) / outputSides.size();
-        if (amountPerSide <= 0)
-            return;
+        // OPTYMALIZACJA: Round-Robin distribution zamiast dzielenia
+        // Unika problemów z małymi ilościami płynu i pakietami
 
-        for (EnumFacing face : outputSides) {
+        int totalAmount = tank.getFluidAmount();
+        int rate = tier.getTransferRate();
+        int amountToSend = Math.min(totalAmount, rate);
+
+        // Ensure index is valid
+        if (roundRobinIndex >= reusableOutputSides.size()) roundRobinIndex = 0;
+
+        // Try sides in round robin order
+        int sidesChecked = 0;
+        int sidesCount = reusableOutputSides.size();
+        boolean transferred = false;
+
+        while (sidesChecked < sidesCount && amountToSend > 0) {
+            int idx = (roundRobinIndex + sidesChecked) % sidesCount;
+            EnumFacing face = reusableOutputSides.get(idx);
+
             net.minecraft.tileentity.TileEntity neighbor = world.getTileEntity(pos.offset(face));
-            if (neighbor == null)
-                continue;
+            if (neighbor != null) {
+                net.minecraftforge.fluids.capability.IFluidHandler handler = neighbor.getCapability(
+                        net.minecraftforge.fluids.capability.CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY,
+                        face.getOpposite());
 
-            net.minecraftforge.fluids.capability.IFluidHandler handler = neighbor.getCapability(
-                    net.minecraftforge.fluids.capability.CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY,
-                    face.getOpposite());
+                if (handler != null) {
+                    FluidStack toTransfer = tank.drain(amountToSend, false);
+                    if (toTransfer != null && toTransfer.amount > 0) {
+                        int filled = handler.fill(toTransfer, true);
+                        if (filled > 0) {
+                            tank.drain(filled, true);
+                            markDirty();
+                            amountToSend -= filled;
+                            transferred = true;
+                            // Update RR index to next pipe for next tick (fairness)
+                            roundRobinIndex = (idx + 1) % sidesCount;
 
-            if (handler != null) {
-                FluidStack toTransfer = tank.drain(amountPerSide, false);
-                if (toTransfer != null && toTransfer.amount > 0) {
-                    int filled = handler.fill(toTransfer, true);
-                    if (filled > 0) {
-                        tank.drain(filled, true);
-                        markDirty();
+                            // Break to spread distribution over ticks rather than splitting tiny amounts?
+                            // Or continue to fill others if we still have rate budget?
+                            // Let's continue if we have budget.
+                        }
                     }
                 }
             }
+            sidesChecked++;
         }
+        return transferred;
     }
 
     @Override

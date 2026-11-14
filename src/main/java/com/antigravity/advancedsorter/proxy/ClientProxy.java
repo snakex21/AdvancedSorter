@@ -19,6 +19,8 @@ import com.antigravity.advancedsorter.client.render.TileTeleportGasPipeRenderer;
 import com.antigravity.advancedsorter.tanks.TileFluidTank;
 import com.antigravity.advancedsorter.tanks.TankTier;
 import com.antigravity.advancedsorter.client.render.TileFluidTankRenderer;
+import net.minecraft.util.ResourceLocation;
+import com.antigravity.advancedsorter.AdvancedSorterMod;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.client.model.ModelLoader;
@@ -151,12 +153,12 @@ public class ClientProxy extends CommonProxy {
         if (CommonProxy.DIRECTIONAL_PIPE != null) {
             ModelLoader.setCustomModelResourceLocation(
                     Item.getItemFromBlock(CommonProxy.DIRECTIONAL_PIPE), 0,
-                    new ModelResourceLocation(CommonProxy.DIRECTIONAL_PIPE.getRegistryName(), "inventory"));
+                    new ModelResourceLocation(new ResourceLocation(AdvancedSorterMod.MODID, "directional_pipe_inventory"), "inventory"));
         }
         if (CommonProxy.TELEPORT_PIPE != null) {
             ModelLoader.setCustomModelResourceLocation(
                     Item.getItemFromBlock(CommonProxy.TELEPORT_PIPE), 0,
-                    new ModelResourceLocation(CommonProxy.TELEPORT_PIPE.getRegistryName(), "inventory"));
+                    new ModelResourceLocation(new ResourceLocation(AdvancedSorterMod.MODID, "teleport_pipe_inventory"), "inventory"));
         }
 
         // Fluid pipes
@@ -183,12 +185,12 @@ public class ClientProxy extends CommonProxy {
         if (CommonProxy.DIRECTIONAL_FLUID_PIPE != null) {
             ModelLoader.setCustomModelResourceLocation(
                     Item.getItemFromBlock(CommonProxy.DIRECTIONAL_FLUID_PIPE), 0,
-                    new ModelResourceLocation(CommonProxy.DIRECTIONAL_FLUID_PIPE.getRegistryName(), "inventory"));
+                    new ModelResourceLocation(new ResourceLocation(AdvancedSorterMod.MODID, "directional_fluid_pipe_inventory"), "inventory"));
         }
         if (CommonProxy.TELEPORT_FLUID_PIPE != null) {
             ModelLoader.setCustomModelResourceLocation(
                     Item.getItemFromBlock(CommonProxy.TELEPORT_FLUID_PIPE), 0,
-                    new ModelResourceLocation(CommonProxy.TELEPORT_FLUID_PIPE.getRegistryName(), "inventory"));
+                    new ModelResourceLocation(new ResourceLocation(AdvancedSorterMod.MODID, "teleport_fluid_pipe_inventory"), "inventory"));
         }
         if (CommonProxy.EXTRACTION_FLUID_PIPE != null) {
             ModelLoader.setCustomModelResourceLocation(
@@ -213,7 +215,7 @@ public class ClientProxy extends CommonProxy {
         if (CommonProxy.TELEPORT_GAS_PIPE != null) {
             ModelLoader.setCustomModelResourceLocation(
                     Item.getItemFromBlock(CommonProxy.TELEPORT_GAS_PIPE), 0,
-                    new ModelResourceLocation(CommonProxy.TELEPORT_GAS_PIPE.getRegistryName(), "inventory"));
+                    new ModelResourceLocation(new ResourceLocation(AdvancedSorterMod.MODID, "teleport_gas_pipe_inventory"), "inventory"));
         }
 
         // Auto Crafter
@@ -221,6 +223,114 @@ public class ClientProxy extends CommonProxy {
             ModelLoader.setCustomModelResourceLocation(
                     Item.getItemFromBlock(CommonProxy.AUTO_CRAFTER), 0,
                     new ModelResourceLocation(CommonProxy.AUTO_CRAFTER.getRegistryName(), "inventory"));
+        }
+
+        // Machines
+        if (CommonProxy.COBBLE_GENERATOR != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.COBBLE_GENERATOR), 0,
+                    new ModelResourceLocation(CommonProxy.COBBLE_GENERATOR.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.FLINT_MAKER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.FLINT_MAKER), 0,
+                    new ModelResourceLocation(CommonProxy.FLINT_MAKER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.CRUCIBLE != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.CRUCIBLE), 0,
+                    new ModelResourceLocation(CommonProxy.CRUCIBLE.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.CRUSHER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.CRUSHER), 0,
+                    new ModelResourceLocation(CommonProxy.CRUSHER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.WASHER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.WASHER), 0,
+                    new ModelResourceLocation(CommonProxy.WASHER.getRegistryName(), "inventory"));
+        }
+
+        if (CommonProxy.OBSIDIAN_GENERATOR != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.OBSIDIAN_GENERATOR), 0,
+                    new ModelResourceLocation(CommonProxy.OBSIDIAN_GENERATOR.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.UNIVERSAL_CHARGER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.UNIVERSAL_CHARGER), 0,
+                    new ModelResourceLocation(CommonProxy.UNIVERSAL_CHARGER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.DECONSTRUCTOR != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.DECONSTRUCTOR), 0,
+                    new ModelResourceLocation(CommonProxy.DECONSTRUCTOR.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.AUTO_REPAIRER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.AUTO_REPAIRER), 0,
+                    new ModelResourceLocation(CommonProxy.AUTO_REPAIRER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.AMMO_PRESS != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.AMMO_PRESS), 0,
+                    new ModelResourceLocation(CommonProxy.AMMO_PRESS.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.ATMOSPHERIC_STABILIZER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.ATMOSPHERIC_STABILIZER), 0,
+                    new ModelResourceLocation(CommonProxy.ATMOSPHERIC_STABILIZER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.ENERGY_CONVERTER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.ENERGY_CONVERTER), 0,
+                    new ModelResourceLocation(CommonProxy.ENERGY_CONVERTER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.ENCHANTMENT_EXTRACTOR != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.ENCHANTMENT_EXTRACTOR), 0,
+                    new ModelResourceLocation(CommonProxy.ENCHANTMENT_EXTRACTOR.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.XP_VACUUM != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.XP_VACUUM), 0,
+                    new ModelResourceLocation(CommonProxy.XP_VACUUM.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.BLOCK_BREAKER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.BLOCK_BREAKER), 0,
+                    new ModelResourceLocation(CommonProxy.BLOCK_BREAKER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.BLOCK_PLACER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.BLOCK_PLACER), 0,
+                    new ModelResourceLocation(CommonProxy.BLOCK_PLACER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.MOB_GRINDER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.MOB_GRINDER), 0,
+                    new ModelResourceLocation(CommonProxy.MOB_GRINDER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.TRASH_CAN != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.TRASH_CAN), 0,
+                    new ModelResourceLocation(CommonProxy.TRASH_CAN.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.AUTO_FISHER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.AUTO_FISHER), 0,
+                    new ModelResourceLocation(CommonProxy.AUTO_FISHER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.VOID_MINER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.VOID_MINER), 0,
+                    new ModelResourceLocation(CommonProxy.VOID_MINER.getRegistryName(), "inventory"));
+        }
+        if (CommonProxy.SMART_ROUTER != null) {
+            ModelLoader.setCustomModelResourceLocation(
+                    Item.getItemFromBlock(CommonProxy.SMART_ROUTER), 0,
+                    new ModelResourceLocation(CommonProxy.SMART_ROUTER.getRegistryName(), "inventory"));
         }
 
         // Fluid Tanks (all tiers)

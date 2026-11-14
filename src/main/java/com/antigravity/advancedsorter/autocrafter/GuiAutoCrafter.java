@@ -36,6 +36,7 @@ public class GuiAutoCrafter extends GuiContainer {
 
     // Wyszukiwarka
     private GuiTextField searchField;
+    private GuiTextField limitField; // Nowe pole do wpisywania limitu
     private List<CraftingRecipe> filteredRecipes = new ArrayList<>();
 
     // Przyciski zakladek
@@ -57,10 +58,13 @@ public class GuiAutoCrafter extends GuiContainer {
     private GuiButton btnAddToAuto;
     private GuiButton btnRemoveFromAuto;
     private GuiButton btnToggleMode;
+    private GuiButton btnLimits;
 
     // Scroll i selekcja
     private int scrollOffset = 0;
     private int selectedRecipeIndex = -1;
+    private boolean showLimits = false;
+    private int selectedIngredientIndex = -1; // Indeks wybranego skladnika do edycji limitu
 
     public GuiAutoCrafter(ContainerAutoCrafter container, TileAutoCrafter tile) {
         super(container);
@@ -83,6 +87,14 @@ public class GuiAutoCrafter extends GuiContainer {
         searchField.setEnableBackgroundDrawing(true);
         searchField.setMaxStringLength(32);
         updateFilteredRecipes();
+
+        // Pole limitu (inicjalnie ukryte)
+        limitField = new GuiTextField(101, fontRenderer, 0, 0, 40, 12);
+        limitField.setTextColor(-1);
+        limitField.setDisabledTextColour(-1);
+        limitField.setEnableBackgroundDrawing(true);
+        limitField.setMaxStringLength(9);
+        limitField.setVisible(false);
 
         // Zakladki - pod tytulem (y=18)
         btnTabRecipes = new GuiButton(0, i + 5, j + 18, 54, 14, "Receptury");
@@ -113,12 +125,14 @@ public class GuiAutoCrafter extends GuiContainer {
         btnToggleAuto = new GuiButton(30, i + 8, j + 142, 40, 14, "Auto");
         btnAddToAuto = new GuiButton(31, i + 50, j + 142, 18, 14, "+");
         btnRemoveFromAuto = new GuiButton(32, i + 70, j + 142, 18, 14, "-");
-        btnToggleMode = new GuiButton(33, i + 90, j + 142, 78, 14, "Tryb: Prio");
+        btnToggleMode = new GuiButton(33, i + 90, j + 142, 48, 14, "Tryb");
+        btnLimits = new GuiButton(34, i + 140, j + 142, 30, 14, "Lim");
 
         buttonList.add(btnToggleAuto);
         buttonList.add(btnAddToAuto);
         buttonList.add(btnRemoveFromAuto);
         buttonList.add(btnToggleMode);
+        buttonList.add(btnLimits);
 
         updateTabVisibility();
         container.setVisibleTab(selectedTab);
@@ -161,11 +175,29 @@ public class GuiAutoCrafter extends GuiContainer {
         this.drawDefaultBackground();
         super.drawScreen(mouseX, mouseY, partialTicks);
         this.renderHoveredToolTip(mouseX, mouseY);
-        searchField.drawTextBox();
+        if (searchField.getVisible()) searchField.drawTextBox();
+        if (limitField.getVisible()) limitField.drawTextBox();
     }
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        if (limitField.getVisible() && limitField.isFocused()) {
+            if (keyCode == 1) { // ESC
+                selectedIngredientIndex = -1;
+                limitField.setVisible(false);
+                return;
+            }
+            if (keyCode == 28) { // Enter
+                saveLimitField();
+                return;
+            }
+            // Allow numbers and backspace
+            if (Character.isDigit(typedChar) || keyCode == 14 || keyCode == 211 || keyCode == 203 || keyCode == 205) {
+                limitField.textboxKeyTyped(typedChar, keyCode);
+            }
+            return;
+        }
+
         if (searchField.textboxKeyTyped(typedChar, keyCode)) {
             updateFilteredRecipes();
             scrollOffset = 0;
@@ -174,15 +206,67 @@ public class GuiAutoCrafter extends GuiContainer {
         super.keyTyped(typedChar, keyCode);
     }
 
+    private void saveLimitField() {
+        if (selectedIngredientIndex >= 0) {
+            List<ItemStack> ingredients = getUniqueAutomationIngredients();
+            if (selectedIngredientIndex < ingredients.size()) {
+                ItemStack ing = ingredients.get(selectedIngredientIndex);
+                try {
+                    String text = limitField.getText().trim();
+                    int val;
+                    if (text.isEmpty() || text.equalsIgnoreCase("Inf")) {
+                        val = Integer.MAX_VALUE;
+                    } else {
+                        val = Integer.parseInt(text);
+                    }
+                    val = Math.max(0, val);
+
+                    PacketHandler.INSTANCE.sendToServer(PacketAutoCrafterAction.setLimit(tile.getPos(), ing, val));
+                    tile.setItemLimit(ing, val);
+                } catch (NumberFormatException e) {
+                    // Ignore invalid number
+                }
+            }
+        }
+        // Deselect after save? Or keep selected? Keeping selected allows easy re-edit.
+        // Let's keep selected but maybe unfocus if Enter was pressed?
+        // Actually deselecting is cleaner UI feel.
+        selectedIngredientIndex = -1;
+        limitField.setVisible(false);
+    }
+
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+        if (limitField.getVisible()) {
+            limitField.mouseClicked(mouseX, mouseY, mouseButton);
+            // If clicked outside, save and close?
+            if (!limitField.isFocused()) {
+                 saveLimitField();
+            }
+        }
         searchField.mouseClicked(mouseX, mouseY, mouseButton);
-        handleRecipeListClick(mouseX, mouseY);
+        if (!showLimits) {
+            handleRecipeListClick(mouseX, mouseY);
+        } else if (selectedTab == 2) {
+            handleLimitListClick(mouseX, mouseY, mouseButton);
+        }
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
     private void updateTabVisibility() {
         updateSearchFieldPosition();
+
+        // Search field visibility
+        searchField.setVisible(!showLimits);
+        if (showLimits) {
+            searchField.setFocused(false);
+        }
+
+        // Limit field visibility logic is handled in draw/click, but ensure it hides if tab changes
+        if (!showLimits || selectedTab != 2) {
+            limitField.setVisible(false);
+            selectedIngredientIndex = -1;
+        }
 
         // Aktywnosc zakladek
         btnTabRecipes.enabled = (selectedTab != 0);
@@ -206,15 +290,18 @@ public class GuiAutoCrafter extends GuiContainer {
         // Zakladka Automatyzacja
         boolean isAutoTab = (selectedTab == 2);
         btnToggleAuto.visible = isAutoTab;
-        btnAddToAuto.visible = isAutoTab;
-        btnRemoveFromAuto.visible = isAutoTab;
+        btnAddToAuto.visible = isAutoTab && !showLimits;
+        btnRemoveFromAuto.visible = isAutoTab && !showLimits;
         btnToggleMode.visible = isAutoTab;
-        btnAddToAuto.enabled = isAutoTab && selectedRecipeIndex >= 0;
-        btnRemoveFromAuto.enabled = isAutoTab && selectedRecipeIndex >= 0;
+        btnLimits.visible = isAutoTab;
+
+        btnAddToAuto.enabled = isAutoTab && selectedRecipeIndex >= 0 && !showLimits;
+        btnRemoveFromAuto.enabled = isAutoTab && selectedRecipeIndex >= 0 && !showLimits;
 
         if (tile != null) {
             btnToggleAuto.displayString = tile.isAutomationEnabled() ? "WL" : "WYL";
-            btnToggleMode.displayString = tile.isRoundRobinMode() ? "Tryb: Cykl" : "Tryb: Prio";
+            btnToggleMode.displayString = tile.isRoundRobinMode() ? "Cykl" : "Prio";
+            btnLimits.displayString = showLimits ? "Rec" : "Lim";
         }
     }
 
@@ -306,6 +393,14 @@ public class GuiAutoCrafter extends GuiContainer {
             case 33: // Toggle mode
                 PacketHandler.INSTANCE.sendToServer(
                     PacketAutoCrafterAction.toggleMode(tile.getPos()));
+                break;
+
+            case 34: // Toggle Limits view
+                showLimits = !showLimits;
+                scrollOffset = 0;
+                selectedIngredientIndex = -1;
+                limitField.setVisible(false);
+                updateTabVisibility();
                 break;
         }
     }
@@ -442,7 +537,7 @@ public class GuiAutoCrafter extends GuiContainer {
 
         String status = tile.isAutomationEnabled() ? "WLACZONA" : "WYLACZONA";
         int statusColor = tile.isAutomationEnabled() ? 0x00AA00 : 0xAA0000;
-        fontRenderer.drawString("Automatyzacja: " + status, i + 8, j + 32, statusColor);
+        fontRenderer.drawString("Auto: " + status, i + 8, j + 32, statusColor);
 
         // Tlo dla input inventory (3x9) - y=42
         for (int row = 0; row < 3; row++) {
@@ -452,6 +547,11 @@ public class GuiAutoCrafter extends GuiContainer {
                 drawRect(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF555555);
                 drawRect(slotX, slotY, slotX + 16, slotY + 16, 0xFF8B8B8B);
             }
+        }
+
+        if (showLimits) {
+            drawLimitsView(mouseX, mouseY);
+            return;
         }
 
         // Lista receptur w automatyzacji (ta nie jest filtrowana przez searchbar, bo to status)
@@ -492,6 +592,179 @@ public class GuiAutoCrafter extends GuiContainer {
             drawRect(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF555555);
             drawRect(slotX, slotY, slotX + 16, slotY + 16, 0xFF8B8B8B);
         }
+    }
+
+    private void drawLimitsView(int mouseX, int mouseY) {
+        int i = guiLeft;
+        int j = guiTop;
+        int y = j + 98;
+
+        fontRenderer.drawString("Limity skladnikow:", i + 8, y, 0x404040);
+        y += 12;
+
+        List<ItemStack> ingredients = getUniqueAutomationIngredients();
+
+        if (ingredients.isEmpty()) {
+            fontRenderer.drawString("Brak aktywnych receptur", i + 10, y, 0x666666);
+            return;
+        }
+
+        RenderHelper.enableGUIStandardItemLighting();
+
+        // Display 3 items max (height constraint)
+        int maxVisible = 3;
+        for (int idx = scrollOffset; idx < Math.min(scrollOffset + maxVisible, ingredients.size()); idx++) {
+            ItemStack ing = ingredients.get(idx);
+            int localIdx = idx - scrollOffset;
+            int entryY = y + localIdx * 18;
+
+            // Background
+            boolean isSelected = (idx == selectedIngredientIndex);
+            int bgColor = isSelected ? 0xFF3366AA : 0xFF555555;
+            drawRect(i + 8, entryY, i + 168, entryY + 17, bgColor);
+
+            // Item
+            itemRender.renderItemAndEffectIntoGUI(ing, i + 9, entryY);
+
+            // Count / Limit
+            if (isSelected) {
+                // Draw text field instead of static text
+                limitField.x = i + 30;
+                limitField.y = entryY + 3;
+                limitField.setVisible(true);
+                // Dont draw string
+            } else {
+                int current = countItem(tile.getAvailableItems(), ing);
+                int limit = tile.getItemLimit(ing);
+                String limitStr = (limit == Integer.MAX_VALUE) ? "Inf" : String.valueOf(limit);
+                String text = current + " / " + limitStr;
+                fontRenderer.drawString(text, i + 30, entryY + 5, 0xFFFFFF);
+            }
+
+            // Buttons [-] [+] [Reset]
+            // Draw pseudo-buttons
+            // [-10]
+            drawRect(i + 80, entryY + 1, i + 95, entryY + 16, 0xFF888888);
+            fontRenderer.drawString("-", i + 85, entryY + 4, 0xFFFFFF);
+
+            // [+10]
+            drawRect(i + 97, entryY + 1, i + 112, entryY + 16, 0xFF888888);
+            fontRenderer.drawString("+", i + 102, entryY + 4, 0xFFFFFF);
+
+            // [Reset/Inf]
+            drawRect(i + 115, entryY + 1, i + 160, entryY + 16, 0xFF888888);
+            fontRenderer.drawString("Inf", i + 130, entryY + 4, 0xFFFFFF);
+        }
+
+        RenderHelper.disableStandardItemLighting();
+
+        // Scroll info
+        if (ingredients.size() > maxVisible) {
+             fontRenderer.drawString((scrollOffset + 1) + "-" + Math.min(scrollOffset + maxVisible, ingredients.size())
+                     + " / " + ingredients.size(), i + 130, j + 98, 0x404040);
+        }
+    }
+
+    private void handleLimitListClick(int mouseX, int mouseY, int mouseButton) {
+        List<ItemStack> ingredients = getUniqueAutomationIngredients();
+        if (ingredients.isEmpty()) return;
+
+        int i = guiLeft;
+        int j = guiTop;
+        int y = j + 110; // y pos from drawLimitsView (98 + 12)
+
+        int maxVisible = 3;
+        for (int idx = scrollOffset; idx < Math.min(scrollOffset + maxVisible, ingredients.size()); idx++) {
+            int localIdx = idx - scrollOffset;
+            int entryY = y + localIdx * 18;
+
+            if (mouseY >= entryY && mouseY < entryY + 17) {
+                ItemStack ing = ingredients.get(idx);
+                int currentLimit = tile.getItemLimit(ing);
+                int change = 0;
+
+                // Check if buttons clicked
+                boolean btnClicked = false;
+
+                // [-] button: x=80-95
+                if (mouseX >= i + 80 && mouseX < i + 95) {
+                    change = isShiftKeyDown() ? -10 : -1;
+                    if (isCtrlKeyDown()) change = -64;
+
+                    int base = (currentLimit == Integer.MAX_VALUE) ? ing.getMaxStackSize() : currentLimit;
+                    int newLimit = Math.max(0, base + change);
+                    PacketHandler.INSTANCE.sendToServer(
+                        PacketAutoCrafterAction.setLimit(tile.getPos(), ing, newLimit));
+                    tile.setItemLimit(ing, newLimit); // Client side predict
+                    btnClicked = true;
+                }
+                // [+] button: x=97-112
+                else if (mouseX >= i + 97 && mouseX < i + 112) {
+                    change = isShiftKeyDown() ? 10 : 1;
+                    if (isCtrlKeyDown()) change = 64;
+
+                    int base = (currentLimit == Integer.MAX_VALUE) ? ing.getMaxStackSize() : currentLimit;
+                    int newLimit = Math.min(64*64, base + change); // Cap at sensible value
+
+                    PacketHandler.INSTANCE.sendToServer(
+                        PacketAutoCrafterAction.setLimit(tile.getPos(), ing, newLimit));
+                    tile.setItemLimit(ing, newLimit); // Client side predict
+                    btnClicked = true;
+                }
+                // [Inf] button: x=115-160
+                else if (mouseX >= i + 115 && mouseX < i + 160) {
+                     PacketHandler.INSTANCE.sendToServer(
+                        PacketAutoCrafterAction.setLimit(tile.getPos(), ing, Integer.MAX_VALUE));
+                     tile.setItemLimit(ing, Integer.MAX_VALUE);
+                     btnClicked = true;
+                }
+
+                if (btnClicked) {
+                    // Play click sound
+                    mc.getSoundHandler().playSound(net.minecraft.client.audio.PositionedSoundRecord.getMasterRecord(
+                        net.minecraft.init.SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                    // Update field if selected
+                    if (selectedIngredientIndex == idx) {
+                        int val = tile.getItemLimit(ing);
+                        limitField.setText((val == Integer.MAX_VALUE) ? "Inf" : String.valueOf(val));
+                    }
+                    return;
+                }
+
+                // If not buttons, select row for editing
+                selectedIngredientIndex = idx;
+                int val = tile.getItemLimit(ing);
+                limitField.setText((val == Integer.MAX_VALUE) ? "Inf" : String.valueOf(val));
+                limitField.setFocused(true);
+                limitField.setCursorPositionEnd();
+                limitField.setSelectionPos(0); // Select all for easy overwrite
+                return;
+            }
+        }
+    }
+
+    private List<ItemStack> getUniqueAutomationIngredients() {
+        List<ItemStack> ingredients = new ArrayList<>();
+        List<Integer> autoRecipeIds = tile.getAutomationRecipes();
+
+        for (Integer id : autoRecipeIds) {
+            CraftingRecipe recipe = tile.getRecipeById(id);
+            if (recipe != null) {
+                for (ItemStack ing : recipe.getIngredients()) {
+                    boolean found = false;
+                    for (ItemStack existing : ingredients) {
+                        if (ItemStack.areItemsEqual(existing, ing) && ItemStack.areItemStackTagsEqual(existing, ing)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        ingredients.add(ing.copy());
+                    }
+                }
+            }
+        }
+        return ingredients;
     }
 
     private int countItem(List<ItemStack> list, ItemStack target) {
@@ -642,13 +915,24 @@ public class GuiAutoCrafter extends GuiContainer {
 
         int wheel = Mouse.getDWheel();
         if (wheel != 0) {
-            int maxVisible = (selectedTab == 0) ? 3 : 2;
-            int maxScroll = Math.max(0, filteredRecipes.size() - maxVisible);
-
-            if (wheel > 0) {
-                scrollOffset = Math.max(0, scrollOffset - 1);
+            if (showLimits && selectedTab == 2) {
+                List<ItemStack> ingredients = getUniqueAutomationIngredients();
+                int maxVisible = 3;
+                int maxScroll = Math.max(0, ingredients.size() - maxVisible);
+                 if (wheel > 0) {
+                    scrollOffset = Math.max(0, scrollOffset - 1);
+                } else {
+                    scrollOffset = Math.min(maxScroll, scrollOffset + 1);
+                }
             } else {
-                scrollOffset = Math.min(maxScroll, scrollOffset + 1);
+                int maxVisible = (selectedTab == 0) ? 3 : 2;
+                int maxScroll = Math.max(0, filteredRecipes.size() - maxVisible);
+
+                if (wheel > 0) {
+                    scrollOffset = Math.max(0, scrollOffset - 1);
+                } else {
+                    scrollOffset = Math.min(maxScroll, scrollOffset + 1);
+                }
             }
         }
     }

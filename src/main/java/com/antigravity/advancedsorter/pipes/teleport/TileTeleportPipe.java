@@ -5,6 +5,7 @@ import com.antigravity.advancedsorter.pipes.TileItemPipe;
 import com.antigravity.advancedsorter.pipes.TravellingItem;
 import com.antigravity.advancedsorter.network.PacketTeleportInfo;
 import com.antigravity.advancedsorter.util.TeleportRegistry;
+import com.antigravity.advancedsorter.util.PendingTeleportRegistry;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -20,6 +21,7 @@ public class TileTeleportPipe extends TileItemPipe {
 
     private int frequency = 0;
     private TeleportMode mode = TeleportMode.BOTH;
+    private int roundRobinIndex = 0;
 
     public TileTeleportPipe() {
         super(PipeTier.DIAMOND); // Teleport pipes are the fastest tier
@@ -43,21 +45,75 @@ public class TileTeleportPipe extends TileItemPipe {
     }
 
     public void setMode(TeleportMode mode) {
+        TeleportMode oldMode = this.mode;
         this.mode = mode;
         updateRegistry();
+
+        // Aktualizuj chunk loading przy zmianie trybu
+        if (world != null && !world.isRemote) {
+            if (mode.canSend() && !oldMode.canSend()) {
+                // Teraz wysyła - załaduj chunk
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .requestChunkLoading(world, pos);
+            } else if (!mode.canSend() && oldMode.canSend()) {
+                // Już nie wysyła - zwolnij chunk
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .releaseChunkLoading(world, pos);
+            }
+
+            // Odbierz oczekujące przedmioty jeśli teraz może odbierać
+            if (mode.canReceive() && !oldMode.canReceive()) {
+                retrievePendingItems();
+            }
+        }
+
         markDirty();
         sendUpdate();
         syncConnectionInfo();
     }
 
     @Override
+    public void validate() {
+        super.validate();
+        if (world != null && !world.isRemote) {
+            updateRegistry();
+        }
+    }
+
+    @Override
     public void onLoad() {
         super.onLoad();
-        if (!world.isRemote) {
+        if (world != null && !world.isRemote) {
             updateRegistry();
-            // Request chunk loading to keep teleporting even when player leaves
-            com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
-                    .requestChunkLoading(world, pos);
+
+            // Rury WYSYŁAJĄCE utrzymują swój chunk załadowany (żeby produkcja działała)
+            if (mode.canSend()) {
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .requestChunkLoading(world, pos);
+            }
+
+            // Odbierz oczekujące przedmioty z kolejki (wysłane gdy chunk był niezaładowany)
+            if (mode.canReceive()) {
+                retrievePendingItems();
+            }
+        }
+    }
+
+    /**
+     * Odbiera przedmioty które były wysłane gdy ten chunk był niezaładowany.
+     */
+    private void retrievePendingItems() {
+        if (world == null || world.isRemote) return;
+        if (!mode.canReceive()) return; // Tylko receivery odbierają
+
+        PendingTeleportRegistry pending = PendingTeleportRegistry.get(world);
+        java.util.List<net.minecraft.item.ItemStack> items = pending.retrievePendingItems(
+                world.provider.getDimension(), pos);
+
+        for (net.minecraft.item.ItemStack stack : items) {
+            if (!stack.isEmpty()) {
+                receiveItem(stack, null, true);
+            }
         }
     }
 
@@ -75,9 +131,11 @@ public class TileTeleportPipe extends TileItemPipe {
         super.invalidate();
         if (world != null && !world.isRemote) {
             TeleportRegistry.get(world).removePipe(pos, world.provider.getDimension());
-            // Release chunk loading
-            com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
-                    .releaseChunkLoading(world, pos);
+            // Zwolnij chunk loading jeśli rura wysyłała
+            if (mode.canSend()) {
+                com.antigravity.advancedsorter.util.ChunkLoadingHandler.getInstance()
+                        .releaseChunkLoading(world, pos);
+            }
         }
     }
 
@@ -102,6 +160,17 @@ public class TileTeleportPipe extends TileItemPipe {
         }
 
         // SERVER SIDE
+        // OPTYMALIZACJA: Idle sleep logic
+        if (travellingItems.isEmpty() && !connectionsDirty) {
+            if (sleepTimer > 0) {
+                sleepTimer--;
+                return;
+            }
+            sleepTimer = 40;
+        } else {
+            sleepTimer = 0;
+        }
+
         boolean stateChanged = false;
 
         if (connectionsDirty) {
@@ -211,38 +280,46 @@ public class TileTeleportPipe extends TileItemPipe {
             return false;
         }
 
-        for (TeleportRegistry.TeleportLocation loc : receivers) {
+        int startIdx = (roundRobinIndex + 1) % receivers.size();
+
+        for (int i = 0; i < receivers.size(); i++) {
+            int currentIdx = (startIdx + i) % receivers.size();
+            TeleportRegistry.TeleportLocation loc = receivers.get(currentIdx);
+
             if (loc.dimension == world.provider.getDimension() && loc.pos.equals(pos)) {
                 continue; // Skip self
             }
 
-            // Get target world, initializing if necessary
+            // Pobierz świat docelowy
             WorldServer targetWorld = DimensionManager.getWorld(loc.dimension);
+
+            // Jeśli wymiar nie jest załadowany - kolejkuj przedmiot
             if (targetWorld == null) {
-                try {
-                    DimensionManager.initDimension(loc.dimension);
-                    targetWorld = DimensionManager.getWorld(loc.dimension);
-                } catch (Exception e) {
-                    continue;
-                }
+                // Kolejkuj przedmiot - zostanie dostarczony gdy chunk się załaduje
+                PendingTeleportRegistry.get(world).queueItem(loc.dimension, loc.pos, item.stack);
+                roundRobinIndex = currentIdx;
+                return true; // Przedmiot "wysłany" (do kolejki)
             }
 
-            if (targetWorld != null) {
-                // Ensure chunk is loaded and stays loaded for this tick
-                if (!targetWorld.isBlockLoaded(loc.pos)) {
-                    targetWorld.getChunkProvider().loadChunk(loc.pos.getX() >> 4, loc.pos.getZ() >> 4);
-                }
+            // Jeśli chunk nie jest załadowany - kolejkuj przedmiot
+            if (!targetWorld.isBlockLoaded(loc.pos)) {
+                // Kolejkuj przedmiot - zostanie dostarczony gdy chunk się załaduje
+                PendingTeleportRegistry.get(world).queueItem(loc.dimension, loc.pos, item.stack);
+                roundRobinIndex = currentIdx;
+                return true; // Przedmiot "wysłany" (do kolejki)
+            }
 
-                TileEntity te = targetWorld.getTileEntity(loc.pos);
-                if (te instanceof TileTeleportPipe) {
-                    TileTeleportPipe targetPipe = (TileTeleportPipe) te;
-                    if (targetPipe.getFrequency() != frequency) {
-                        continue;
-                    }
-                    // Receive item at center
-                    targetPipe.receiveItem(item.stack, null, true);
-                    return true;
+            // Chunk jest załadowany - teleportuj bezpośrednio
+            TileEntity te = targetWorld.getTileEntity(loc.pos);
+            if (te instanceof TileTeleportPipe) {
+                TileTeleportPipe targetPipe = (TileTeleportPipe) te;
+                if (targetPipe.getFrequency() != frequency) {
+                    continue;
                 }
+                // Receive item at center
+                targetPipe.receiveItem(item.stack, null, true);
+                roundRobinIndex = currentIdx;
+                return true;
             }
         }
         return false;
@@ -259,6 +336,7 @@ public class TileTeleportPipe extends TileItemPipe {
         super.readFromNBT(compound);
         frequency = compound.getInteger("Frequency");
         mode = TeleportMode.values()[compound.getInteger("TeleportMode") % TeleportMode.values().length];
+        roundRobinIndex = compound.getInteger("RoundRobinIndex");
     }
 
     @Override
@@ -266,6 +344,7 @@ public class TileTeleportPipe extends TileItemPipe {
         super.writeToNBT(compound);
         compound.setInteger("Frequency", frequency);
         compound.setInteger("TeleportMode", mode.ordinal());
+        compound.setInteger("RoundRobinIndex", roundRobinIndex);
         return compound;
     }
 

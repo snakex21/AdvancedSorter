@@ -1,0 +1,32 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "BEB",
+        "GIG",
+        "RPR"
+    ],
+    "key": {
+        "B": {
+            "item": "minecraft:book"
+        },
+        "E": {
+            "item": "minecraft:enchanting_table"
+        },
+        "G": {
+            "item": "minecraft:gold_ingot"
+        },
+        "I": {
+            "item": "minecraft:iron_block"
+        },
+        "R": {
+            "item": "minecraft:redstone"
+        },
+        "P": {
+            "item": "minecraft:sticky_piston"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:enchantment_extractor",
+        "count": 1
+    }
+}

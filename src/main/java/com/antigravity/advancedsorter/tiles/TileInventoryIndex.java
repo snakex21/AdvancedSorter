@@ -37,6 +37,12 @@ public class TileInventoryIndex extends TileEntity implements ITickable {
 
     private int tickCount = 0;
 
+    // OPTYMALIZACJA: Hash ostatniego stanu inwentarza
+    private int lastInventoryHash = 0;
+
+    // OPTYMALIZACJA: Flaga informująca czy ktokolwiek ma otwarte GUI
+    private int activeViewers = 0;
+
     // Output slots for retrieval (9 slots)
     private ItemStackHandler outputHandler = new ItemStackHandler(9) {
         @Override
@@ -50,10 +56,58 @@ public class TileInventoryIndex extends TileEntity implements ITickable {
 
     @Override
     public void update() {
-        tickCount++;
-        if (tickCount % 20 == 0) { // Scan every second
-            scanInventories();
+        // OPTYMALIZACJA: Nie skanuj jeśli nikt nie ma otwartego GUI
+        if (activeViewers <= 0) {
+            return;
         }
+
+        tickCount++;
+
+        // SAFETY CHECK: Ensure we don't have "phantom" viewers if players disconnected or moved away
+        // Check every 5 seconds (100 ticks)
+        if (tickCount % 100 == 0) {
+             validateViewers();
+             if (activeViewers <= 0) return;
+        }
+
+        if (tickCount % 20 == 0) { // Scan every second
+            scanInventories(false);
+        }
+    }
+
+    private void validateViewers() {
+        if (world == null) return;
+
+        // Count players within range (64 blocks)
+        int validPlayers = 0;
+        for (net.minecraft.entity.player.EntityPlayer player : world.playerEntities) {
+            if (player.getDistanceSq(this.pos) < 64 * 64) {
+                // Ideally check openContainer too, but distance is a good proxy for "should we update"
+                validPlayers++;
+            }
+        }
+
+        if (validPlayers == 0 && activeViewers > 0) {
+            activeViewers = 0; // Force reset if no one is around
+        }
+    }
+
+    /**
+     * Wywołaj gdy gracz otwiera GUI tego indeksu
+     */
+    public void onPlayerOpenGui() {
+        activeViewers++;
+        // Natychmiast zeskanuj przy otwarciu
+        if (!world.isRemote) {
+            scanInventories(true);
+        }
+    }
+
+    /**
+     * Wywołaj gdy gracz zamyka GUI tego indeksu
+     */
+    public void onPlayerCloseGui() {
+        activeViewers = Math.max(0, activeViewers - 1);
     }
 
     public void addLinkedChest(BlockPos pos) {
@@ -221,7 +275,7 @@ public class TileInventoryIndex extends TileEntity implements ITickable {
         return all;
     }
 
-    private void scanInventories() {
+    private void scanInventories(boolean force) {
         if (world.isRemote)
             return;
 
@@ -261,6 +315,34 @@ public class TileInventoryIndex extends TileEntity implements ITickable {
 
         // Convert to List
         List<PacketInventoryIndexSync.IndexEntry> unsorted = new ArrayList<>(aggregation.values());
+
+        // OPTYMALIZACJA: Oblicz hash i sprawdź czy coś się zmieniło
+        // Używamy sumowania hashów dla niezależności od kolejności (HashMap nie gwarantuje kolejności)
+        int currentHash = 0;
+        for (PacketInventoryIndexSync.IndexEntry entry : unsorted) {
+            int entryHash = 17;
+            // Hash item info
+            entryHash = 31 * entryHash + entry.stack.getItem().hashCode();
+            entryHash = 31 * entryHash + entry.stack.getMetadata();
+            // Hash count
+            entryHash = 31 * entryHash + entry.count;
+
+            // Hash locations (sum for order independence inside the entry too, just in case)
+            int locHash = 0;
+            for (BlockPos p : entry.locations) {
+                locHash += p.hashCode();
+            }
+            entryHash = 31 * entryHash + locHash;
+
+            // Sum for order independence of the main list
+            currentHash += entryHash;
+        }
+
+        // Jeśli nie wymuszono odświeżenia i hash jest taki sam, nie wysyłaj pakietu
+        if (!force && currentHash == lastInventoryHash) {
+            return;
+        }
+        lastInventoryHash = currentHash;
 
         // Validation: send packet to players viewing the GUI
         // We can check players in range, or players who have the container open.

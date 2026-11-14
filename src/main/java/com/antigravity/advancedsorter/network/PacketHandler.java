@@ -54,5 +54,19 @@ public class PacketHandler {
                                 packetId++, Side.SERVER);
                 INSTANCE.registerMessage(PacketCopyAutoCrafterRecipes.Handler.class, PacketCopyAutoCrafterRecipes.class,
                                 packetId++, Side.SERVER);
+
+                // Ammo Press
+                INSTANCE.registerMessage(PacketAmmoPressAction.Handler.class, PacketAmmoPressAction.class,
+                                packetId++, Side.SERVER);
+
+                // Smart Router
+                INSTANCE.registerMessage(PacketUpdateSmartRouterRules.Handler.class, PacketUpdateSmartRouterRules.class,
+                                packetId++, Side.SERVER);
+                INSTANCE.registerMessage(PacketSmartRouterAction.Handler.class, PacketSmartRouterAction.class,
+                                packetId++, Side.SERVER);
+
+                // Crusher Mode
+                INSTANCE.registerMessage(PacketCrusherMode.Handler.class, PacketCrusherMode.class,
+                                packetId++, Side.SERVER);
         }
 }

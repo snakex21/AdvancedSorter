@@ -34,9 +34,52 @@ import com.antigravity.advancedsorter.tiles.TileInventoryIndex;
 import com.antigravity.advancedsorter.blocks.ItemNetworkTool;
 import com.antigravity.advancedsorter.autocrafter.BlockAutoCrafter;
 import com.antigravity.advancedsorter.autocrafter.TileAutoCrafter;
+import com.antigravity.advancedsorter.machines.cobblegen.BlockCobbleGenerator;
+import com.antigravity.advancedsorter.machines.cobblegen.TileCobbleGenerator;
+import com.antigravity.advancedsorter.machines.crucible.BlockCrucible;
+import com.antigravity.advancedsorter.machines.crucible.TileCrucible;
+import com.antigravity.advancedsorter.machines.crusher.BlockCrusher;
+import com.antigravity.advancedsorter.machines.crusher.TileCrusher;
+import com.antigravity.advancedsorter.machines.washer.BlockWasher;
+import com.antigravity.advancedsorter.machines.washer.TileWasher;
+import com.antigravity.advancedsorter.machines.obsidiangen.BlockObsidianGenerator;
+import com.antigravity.advancedsorter.machines.obsidiangen.TileObsidianGenerator;
+import com.antigravity.advancedsorter.machines.charger.BlockUniversalCharger;
+import com.antigravity.advancedsorter.machines.charger.TileUniversalCharger;
+import com.antigravity.advancedsorter.machines.deconstructor.BlockDeconstructor;
+import com.antigravity.advancedsorter.machines.deconstructor.TileDeconstructor;
+import com.antigravity.advancedsorter.machines.repairer.BlockAutoRepairer;
+import com.antigravity.advancedsorter.machines.repairer.TileAutoRepairer;
+import com.antigravity.advancedsorter.machines.ammopress.BlockAmmoPress;
+import com.antigravity.advancedsorter.machines.ammopress.TileAmmoPress;
+import com.antigravity.advancedsorter.machines.stabilizer.BlockAtmosphericStabilizer;
+import com.antigravity.advancedsorter.machines.stabilizer.TileAtmosphericStabilizer;
+import com.antigravity.advancedsorter.machines.converter.BlockEnergyConverter;
+import com.antigravity.advancedsorter.machines.converter.TileEnergyConverter;
+import com.antigravity.advancedsorter.machines.flintmaker.BlockFlintMaker;
+import com.antigravity.advancedsorter.machines.flintmaker.TileFlintMaker;
+import com.antigravity.advancedsorter.machines.extractor.BlockEnchantmentExtractor;
+import com.antigravity.advancedsorter.machines.extractor.TileEnchantmentExtractor;
+import com.antigravity.advancedsorter.machines.xpvacuum.BlockXPVacuum;
+import com.antigravity.advancedsorter.machines.xpvacuum.TileXPVacuum;
+import com.antigravity.advancedsorter.machines.breaker.BlockBlockBreaker;
+import com.antigravity.advancedsorter.machines.breaker.TileBlockBreaker;
+import com.antigravity.advancedsorter.machines.placer.BlockBlockPlacer;
+import com.antigravity.advancedsorter.machines.placer.TileBlockPlacer;
+import com.antigravity.advancedsorter.machines.grinder.BlockMobGrinder;
+import com.antigravity.advancedsorter.machines.grinder.TileMobGrinder;
+import com.antigravity.advancedsorter.machines.trashcan.BlockTrashCan;
+import com.antigravity.advancedsorter.machines.trashcan.TileTrashCan;
+import com.antigravity.advancedsorter.machines.fisher.BlockAutoFisher;
+import com.antigravity.advancedsorter.machines.fisher.TileAutoFisher;
+import com.antigravity.advancedsorter.machines.voidminer.BlockVoidMiner;
+import com.antigravity.advancedsorter.machines.voidminer.TileVoidMiner;
+import com.antigravity.advancedsorter.machines.smartrouter.BlockSmartRouter;
+import com.antigravity.advancedsorter.machines.smartrouter.TileSmartRouter;
 import com.antigravity.advancedsorter.tanks.BlockFluidTank;
 import com.antigravity.advancedsorter.tanks.TileFluidTank;
 import com.antigravity.advancedsorter.tanks.ItemBlockFluidTank;
+import com.antigravity.advancedsorter.fluids.ModFluids;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
@@ -93,10 +136,56 @@ public class CommonProxy {
         // Auto Crafter
         public static BlockAutoCrafter AUTO_CRAFTER;
 
+        // Machines
+        public static BlockCobbleGenerator COBBLE_GENERATOR;
+        public static BlockCrucible CRUCIBLE;
+        public static BlockCrusher CRUSHER;
+        public static BlockWasher WASHER;
+        public static BlockObsidianGenerator OBSIDIAN_GENERATOR;
+        public static BlockUniversalCharger UNIVERSAL_CHARGER;
+        public static BlockDeconstructor DECONSTRUCTOR;
+        public static BlockAutoRepairer AUTO_REPAIRER;
+        public static BlockAmmoPress AMMO_PRESS;
+        public static BlockAtmosphericStabilizer ATMOSPHERIC_STABILIZER;
+
+        // Energy Converter
+        public static BlockEnergyConverter ENERGY_CONVERTER;
+
+        // Flint Maker
+        public static BlockFlintMaker FLINT_MAKER;
+
+        // Enchantment Extractor
+        public static BlockEnchantmentExtractor ENCHANTMENT_EXTRACTOR;
+
+        // XP Vacuum
+        public static BlockXPVacuum XP_VACUUM;
+
+        // Block Breaker
+        public static BlockBlockBreaker BLOCK_BREAKER;
+
+        // Block Placer
+        public static BlockBlockPlacer BLOCK_PLACER;
+
+        // Mob Grinder
+        public static BlockMobGrinder MOB_GRINDER;
+
+        // Trash Can
+        public static BlockTrashCan TRASH_CAN;
+
+        // Auto Fisher
+        public static BlockAutoFisher AUTO_FISHER;
+
+        // Void Miner
+        public static BlockVoidMiner VOID_MINER;
+
+        // Smart Router
+        public static BlockSmartRouter SMART_ROUTER;
+
         // Fluid Tanks
         public static BlockFluidTank FLUID_TANK;
 
         public void preInit(FMLPreInitializationEvent event) {
+                ModFluids.registerFluids();
         }
 
         public void init(FMLInitializationEvent event) {
@@ -234,6 +323,132 @@ public class CommonProxy {
                 GameRegistry.registerTileEntity(TileAutoCrafter.class,
                                 new ResourceLocation(AdvancedSorterMod.MODID, "tile_auto_crafter"));
 
+                // Cobble Generator
+                COBBLE_GENERATOR = new BlockCobbleGenerator();
+                event.getRegistry().register(COBBLE_GENERATOR);
+                GameRegistry.registerTileEntity(TileCobbleGenerator.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_cobble_generator"));
+
+                // Crucible
+                CRUCIBLE = new BlockCrucible();
+                event.getRegistry().register(CRUCIBLE);
+                GameRegistry.registerTileEntity(TileCrucible.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_crucible"));
+
+                // Crusher
+                CRUSHER = new BlockCrusher();
+                event.getRegistry().register(CRUSHER);
+                GameRegistry.registerTileEntity(TileCrusher.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_crusher"));
+
+                // Washer
+                WASHER = new BlockWasher();
+                event.getRegistry().register(WASHER);
+                GameRegistry.registerTileEntity(TileWasher.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_washer"));
+
+                // Obsidian Generator
+                OBSIDIAN_GENERATOR = new BlockObsidianGenerator();
+                event.getRegistry().register(OBSIDIAN_GENERATOR);
+                GameRegistry.registerTileEntity(TileObsidianGenerator.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_obsidian_generator"));
+
+                // Universal Charger
+                UNIVERSAL_CHARGER = new BlockUniversalCharger();
+                event.getRegistry().register(UNIVERSAL_CHARGER);
+                GameRegistry.registerTileEntity(TileUniversalCharger.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_universal_charger"));
+
+                // Deconstructor
+                DECONSTRUCTOR = new BlockDeconstructor();
+                event.getRegistry().register(DECONSTRUCTOR);
+                GameRegistry.registerTileEntity(TileDeconstructor.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_deconstructor"));
+
+                // Auto Repairer
+                AUTO_REPAIRER = new BlockAutoRepairer();
+                event.getRegistry().register(AUTO_REPAIRER);
+                GameRegistry.registerTileEntity(TileAutoRepairer.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_auto_repairer"));
+
+                // Ammo Press
+                AMMO_PRESS = new BlockAmmoPress();
+                event.getRegistry().register(AMMO_PRESS);
+                GameRegistry.registerTileEntity(TileAmmoPress.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_ammo_press"));
+
+                // Atmospheric Stabilizer
+                ATMOSPHERIC_STABILIZER = new BlockAtmosphericStabilizer();
+                event.getRegistry().register(ATMOSPHERIC_STABILIZER);
+                GameRegistry.registerTileEntity(TileAtmosphericStabilizer.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_atmospheric_stabilizer"));
+
+                // Energy Converter
+                ENERGY_CONVERTER = new BlockEnergyConverter();
+                event.getRegistry().register(ENERGY_CONVERTER);
+                GameRegistry.registerTileEntity(TileEnergyConverter.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_energy_converter"));
+
+                // Flint Maker
+                FLINT_MAKER = new BlockFlintMaker();
+                event.getRegistry().register(FLINT_MAKER);
+                GameRegistry.registerTileEntity(TileFlintMaker.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_flint_maker"));
+
+                // Enchantment Extractor
+                ENCHANTMENT_EXTRACTOR = new BlockEnchantmentExtractor();
+                event.getRegistry().register(ENCHANTMENT_EXTRACTOR);
+                GameRegistry.registerTileEntity(TileEnchantmentExtractor.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_enchantment_extractor"));
+
+                // XP Vacuum
+                XP_VACUUM = new BlockXPVacuum();
+                event.getRegistry().register(XP_VACUUM);
+                GameRegistry.registerTileEntity(TileXPVacuum.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_xp_vacuum"));
+
+                // Block Breaker
+                BLOCK_BREAKER = new BlockBlockBreaker();
+                event.getRegistry().register(BLOCK_BREAKER);
+                GameRegistry.registerTileEntity(TileBlockBreaker.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_block_breaker"));
+
+                // Block Placer
+                BLOCK_PLACER = new BlockBlockPlacer();
+                event.getRegistry().register(BLOCK_PLACER);
+                GameRegistry.registerTileEntity(TileBlockPlacer.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_block_placer"));
+
+                // Mob Grinder
+                MOB_GRINDER = new BlockMobGrinder();
+                event.getRegistry().register(MOB_GRINDER);
+                GameRegistry.registerTileEntity(TileMobGrinder.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_mob_grinder"));
+
+                // Trash Can
+                TRASH_CAN = new BlockTrashCan();
+                event.getRegistry().register(TRASH_CAN);
+                GameRegistry.registerTileEntity(TileTrashCan.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_trash_can"));
+
+                // Auto Fisher
+                AUTO_FISHER = new BlockAutoFisher();
+                event.getRegistry().register(AUTO_FISHER);
+                GameRegistry.registerTileEntity(TileAutoFisher.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_auto_fisher"));
+
+                // Void Miner
+                VOID_MINER = new BlockVoidMiner();
+                event.getRegistry().register(VOID_MINER);
+                GameRegistry.registerTileEntity(TileVoidMiner.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_void_miner"));
+
+                // Smart Router
+                SMART_ROUTER = new BlockSmartRouter();
+                event.getRegistry().register(SMART_ROUTER);
+                GameRegistry.registerTileEntity(TileSmartRouter.class,
+                                new ResourceLocation(AdvancedSorterMod.MODID, "tile_smart_router"));
+
                 // Fluid Tank (all tiers)
                 FLUID_TANK = new BlockFluidTank();
                 event.getRegistry().register(FLUID_TANK);
@@ -305,6 +520,56 @@ public class CommonProxy {
                 // Auto Crafter
                 event.getRegistry().register(new ItemBlock(AUTO_CRAFTER)
                                 .setRegistryName(AUTO_CRAFTER.getRegistryName()));
+
+                // Machines
+                event.getRegistry().register(new ItemBlock(COBBLE_GENERATOR)
+                                .setRegistryName(COBBLE_GENERATOR.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(CRUCIBLE)
+                                .setRegistryName(CRUCIBLE.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(CRUSHER)
+                                .setRegistryName(CRUSHER.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(WASHER)
+                                .setRegistryName(WASHER.getRegistryName()));
+
+                event.getRegistry().register(new ItemBlock(OBSIDIAN_GENERATOR)
+                                .setRegistryName(OBSIDIAN_GENERATOR.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(UNIVERSAL_CHARGER)
+                                .setRegistryName(UNIVERSAL_CHARGER.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(DECONSTRUCTOR)
+                                .setRegistryName(DECONSTRUCTOR.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(AUTO_REPAIRER)
+                                .setRegistryName(AUTO_REPAIRER.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(AMMO_PRESS)
+                                .setRegistryName(AMMO_PRESS.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(ATMOSPHERIC_STABILIZER)
+                                .setRegistryName(ATMOSPHERIC_STABILIZER.getRegistryName()));
+
+                event.getRegistry().register(new ItemBlock(ENERGY_CONVERTER)
+                                .setRegistryName(ENERGY_CONVERTER.getRegistryName()));
+
+                event.getRegistry().register(new ItemBlock(FLINT_MAKER)
+                                .setRegistryName(FLINT_MAKER.getRegistryName()));
+
+                event.getRegistry().register(new ItemBlock(ENCHANTMENT_EXTRACTOR)
+                                .setRegistryName(ENCHANTMENT_EXTRACTOR.getRegistryName()));
+
+                event.getRegistry().register(new ItemBlock(XP_VACUUM)
+                                .setRegistryName(XP_VACUUM.getRegistryName()));
+
+                event.getRegistry().register(new ItemBlock(BLOCK_BREAKER)
+                                .setRegistryName(BLOCK_BREAKER.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(BLOCK_PLACER)
+                                .setRegistryName(BLOCK_PLACER.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(MOB_GRINDER)
+                                .setRegistryName(MOB_GRINDER.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(TRASH_CAN)
+                                .setRegistryName(TRASH_CAN.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(AUTO_FISHER)
+                                .setRegistryName(AUTO_FISHER.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(VOID_MINER)
+                                .setRegistryName(VOID_MINER.getRegistryName()));
+                event.getRegistry().register(new ItemBlock(SMART_ROUTER)
+                                .setRegistryName(SMART_ROUTER.getRegistryName()));
 
                 // Fluid Tank (with subtypes for tiers)
                 event.getRegistry().register(new ItemBlockFluidTank(FLUID_TANK)

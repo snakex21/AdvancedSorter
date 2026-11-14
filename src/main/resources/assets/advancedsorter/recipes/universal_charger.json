@@ -1,0 +1,28 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        " G ",
+        "RBR",
+        "III"
+    ],
+    "key": {
+        "G": {
+            "type": "forge:ore_dict",
+            "ore": "ingotGold"
+        },
+        "R": {
+            "type": "forge:ore_dict",
+            "ore": "blockRedstone"
+        },
+        "B": {
+            "item": "minecraft:heavy_weighted_pressure_plate"
+        },
+        "I": {
+            "type": "forge:ore_dict",
+            "ore": "ingotIron"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:universal_charger"
+    }
+}

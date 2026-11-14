@@ -18,14 +18,23 @@ public class TileItemPipeRenderer extends TileEntitySpecialRenderer<TileItemPipe
             return;
         }
 
+        // OPTYMALIZACJA: Distance culling
+        // Nie renderuj przedmiotów jeśli są zbyt daleko (> 64 bloki = 4096 jednostek kwadratowych)
+        // Przedmioty są małe i w rurach, z daleka i tak ich nie widać
+        double distSq = x * x + y * y + z * z;
+        if (distSq > 4096.0) {
+            return;
+        }
+
         GlStateManager.pushMatrix();
 
         // Move to block center
         GlStateManager.translate(x + 0.5, y + 0.5, z + 0.5);
 
         // Smart X-ray: Offset towards camera to clear pipe wall but not other blocks
-        double camDist = Math.sqrt(x * x + y * y + z * z);
-        if (camDist > 0.1) {
+        // Używamy distSq obliczonego wcześniej, unikamy jednego sqrt jeśli distSq <= 0.01
+        if (distSq > 0.01) {
+            double camDist = Math.sqrt(distSq);
             double dirX = -x / camDist;
             double dirY = -y / camDist;
             double dirZ = -z / camDist;
@@ -38,6 +47,10 @@ public class TileItemPipeRenderer extends TileEntitySpecialRenderer<TileItemPipe
         GlStateManager.scale(0.25, 0.25, 0.25);
 
         RenderHelper.enableStandardItemLighting();
+
+        // OPTYMALIZACJA: Pobierz czas raz dla wszystkich przedmiotów w rurze
+        long time = Minecraft.getSystemTime();
+        float rotation = (time / 20.0f) % 360.0f;
 
         for (TravellingItem item : te.getTravellingItems()) {
             if (item.stack.isEmpty())
@@ -79,9 +92,7 @@ public class TileItemPipeRenderer extends TileEntitySpecialRenderer<TileItemPipe
 
             GlStateManager.translate(offsetX, offsetY, offsetZ);
 
-            // Rotation
-            long time = Minecraft.getSystemTime();
-            float rotation = (time / 20.0f) % 360.0f;
+            // OPTYMALIZACJA: Rotacja pobrana wcześniej (poza pętlą)
             GlStateManager.rotate(rotation, 0, 1, 0);
 
             Minecraft.getMinecraft().getRenderItem().renderItem(item.stack, ItemCameraTransforms.TransformType.FIXED);

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "advancedsorter:flint_maker" },
+    "facing=south": { "model": "advancedsorter:flint_maker", "y": 180 },
+    "facing=west":  { "model": "advancedsorter:flint_maker", "y": 270 },
+    "facing=east":  { "model": "advancedsorter:flint_maker", "y": 90 }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "advancedsorter:xp_vacuum" },
+    "facing=south": { "model": "advancedsorter:xp_vacuum", "y": 180 },
+    "facing=west":  { "model": "advancedsorter:xp_vacuum", "y": 270 },
+    "facing=east":  { "model": "advancedsorter:xp_vacuum", "y": 90 }
+  }
+}

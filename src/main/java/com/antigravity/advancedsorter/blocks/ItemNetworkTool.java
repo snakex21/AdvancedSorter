@@ -4,6 +4,7 @@ import com.antigravity.advancedsorter.AdvancedSorterMod;
 import com.antigravity.advancedsorter.tiles.TileInventoryIndex;
 import com.antigravity.advancedsorter.tiles.ChestGroup;
 import com.antigravity.advancedsorter.autocrafter.TileAutoCrafter;
+import com.antigravity.advancedsorter.machines.ammopress.TileAmmoPress;
 import com.antigravity.advancedsorter.network.PacketHandler;
 import com.antigravity.advancedsorter.network.PacketChestGroupSync;
 import com.antigravity.advancedsorter.network.PacketNetworkToolSync;
@@ -232,6 +233,58 @@ public class ItemNetworkTool extends Item {
             return EnumActionResult.SUCCESS;
         }
 
+        // ========== CLICK ON AMMO PRESS ==========
+        if (tile instanceof TileAmmoPress) {
+            TileAmmoPress ammoPress = (TileAmmoPress) tile;
+            BlockPos pressCopySource = getCopySourceAmmoPress(stack);
+
+            if (pressCopySource != null) {
+                // We have a copy source - paste recipes
+                if (pressCopySource.equals(pos)) {
+                    // Same press - cancel
+                    if (isSneaking) {
+                        clearCopySourceAmmoPress(stack);
+                        player.sendMessage(new TextComponentString(
+                                "§cCancelled copy mode."));
+                    } else {
+                        player.sendMessage(new TextComponentString(
+                                "§eThis is the source Ammo Press. Shift+Click to cancel."));
+                    }
+                } else {
+                    // Different press - paste
+                    TileEntity sourceTile = worldIn.getTileEntity(pressCopySource);
+                    if (sourceTile instanceof TileAmmoPress) {
+                        TileAmmoPress sourcePress = (TileAmmoPress) sourceTile;
+                        int added = ammoPress.copyRecipesFrom(sourcePress);
+                        if (added > 0) {
+                            player.sendMessage(new TextComponentString(
+                                    "§aPasted " + added + " new recipe(s) to Ammo Press."));
+                        } else {
+                            player.sendMessage(new TextComponentString(
+                                    "§eAll recipes are already present in this Ammo Press."));
+                        }
+                    } else {
+                        player.sendMessage(new TextComponentString(
+                                "§cSource Ammo Press no longer exists."));
+                    }
+                    clearCopySourceAmmoPress(stack);
+                }
+            } else if (isSneaking) {
+                // Enter copy mode
+                setCopySourceAmmoPress(stack, pos);
+                player.sendMessage(new TextComponentString(
+                        "§aCopied Ammo Press §7(" + ammoPress.getRecipes().size() + " recipes)\n" +
+                        "§7Click another Ammo Press to paste."));
+            } else {
+                // Just show info
+                player.sendMessage(new TextComponentString(
+                        "§7Ammo Press at " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() +
+                        " §7(" + ammoPress.getRecipes().size() + " recipes)\n" +
+                        "§7Shift+Click to copy recipes."));
+            }
+            return EnumActionResult.SUCCESS;
+        }
+
         // ========== CLICK ON CHEST/INVENTORY ==========
         if (tile != null && tile.hasCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null)) {
             if (isSneaking) {
@@ -428,6 +481,31 @@ public class ItemNetworkTool extends Item {
         NBTTagCompound tag = stack.getTagCompound();
         if (tag != null) {
             tag.removeTag("CopySourceAutoCrafter");
+            stack.setTagCompound(tag);
+        }
+    }
+
+    // ========== COPY SOURCE AMMO PRESS (for copying recipes) ==========
+
+    public static BlockPos getCopySourceAmmoPress(ItemStack stack) {
+        NBTTagCompound tag = stack.getTagCompound();
+        if (tag != null && tag.hasKey("CopySourceAmmoPress")) {
+            return NBTUtil.getPosFromTag(tag.getCompoundTag("CopySourceAmmoPress"));
+        }
+        return null;
+    }
+
+    public static void setCopySourceAmmoPress(ItemStack stack, BlockPos pos) {
+        NBTTagCompound tag = stack.getTagCompound();
+        if (tag == null) tag = new NBTTagCompound();
+        tag.setTag("CopySourceAmmoPress", NBTUtil.createPosTag(pos));
+        stack.setTagCompound(tag);
+    }
+
+    public static void clearCopySourceAmmoPress(ItemStack stack) {
+        NBTTagCompound tag = stack.getTagCompound();
+        if (tag != null) {
+            tag.removeTag("CopySourceAmmoPress");
             stack.setTagCompound(tag);
         }
     }

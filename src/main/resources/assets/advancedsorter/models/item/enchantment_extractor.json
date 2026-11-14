@@ -1,0 +1,11 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "up": "minecraft:blocks/enchanting_table_top",
+    "down": "minecraft:blocks/iron_block",
+    "north": "minecraft:blocks/piston_top_sticky",
+    "south": "minecraft:blocks/furnace_side",
+    "east": "minecraft:blocks/furnace_side",
+    "west": "minecraft:blocks/furnace_side"
+  }
+}

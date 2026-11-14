@@ -37,3 +37,19 @@ Thumbs.db
 
 # Claude Code
 .claude/
+
+# Minecraft dev runs (runClient/runServer), worlds, logs and crash reports
+run/
+logs/
+crash-reports/
+saves/
+*.log
+
+# Local data, caches and secrets
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+__pycache__/
+*.pyc

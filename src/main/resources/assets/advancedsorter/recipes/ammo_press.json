@@ -1,0 +1,27 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        " I ",
+        "PGP",
+        "IBI"
+    ],
+    "key": {
+        "I": {
+            "type": "forge:ore_dict",
+            "ore": "ingotIron"
+        },
+        "P": {
+            "item": "minecraft:piston"
+        },
+        "G": {
+            "item": "minecraft:gunpowder"
+        },
+        "B": {
+            "type": "forge:ore_dict",
+            "ore": "blockIron"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:ammo_press"
+    }
+}

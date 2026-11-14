@@ -30,12 +30,24 @@ import java.util.*;
  */
 public class TileAutoCrafter extends TileEntity implements ITickable {
 
+    // Flag to batch updates and prevent packet spam
+    private boolean updateNeeded = false;
+
+    // OPTYMALIZACJA: Cache stanu automatyzacji
+    // Jeśli ostatnia próba automatyzacji nie powiodła się dla wszystkich receptur,
+    // i ekwipunek się nie zmienił, nie próbuj ponownie (oszczędność CPU).
+    private boolean inventoryDirty = true;
+    private boolean automationStuck = false;
+
     // Sloty wejściowe (27 slotów - jak skrzynia)
     private final ItemStackHandler inputInventory = new ItemStackHandler(27) {
         @Override
         protected void onContentsChanged(int slot) {
             markDirty();
-            sendUpdate();
+            updateNeeded = true;
+            inventoryDirty = true;
+            automationStuck = false;
+            automationSleepTimer = 0; // Wake up
         }
     };
 
@@ -44,7 +56,9 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
         @Override
         protected void onContentsChanged(int slot) {
             markDirty();
-            sendUpdate();
+            updateNeeded = true;
+            inventoryDirty = true;
+            automationStuck = false;
         }
     };
 
@@ -53,7 +67,7 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
         @Override
         protected void onContentsChanged(int slot) {
             markDirty();
-            sendUpdate();
+            updateNeeded = true;
         }
     };
 
@@ -62,7 +76,7 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
         @Override
         protected void onContentsChanged(int slot) {
             markDirty();
-            sendUpdate();
+            updateNeeded = true;
         }
     };
 
@@ -87,9 +101,18 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
     // Zmieniono z Set na List aby zachowac kolejnosc (1 -> 2 -> 3)
     private final List<Integer> automationRecipes = new ArrayList<>();
 
+    // Map of item key -> limit
+    private final Map<String, Integer> itemLimits = new HashMap<>();
+
     // Tick counter dla przetwarzania
     private int tickCounter = 0;
     private static final int CRAFT_INTERVAL = 10; // Co ile ticków próbować craftować
+
+    // OPTYMALIZACJA: Dodatkowy sleep timer gdy brakuje składników
+    private int automationSleepTimer = 0;
+
+    // OPTYMALIZACJA: Reużywalna lista dla getAvailableItems
+    private final List<ItemStack> reusableAvailableItems = new ArrayList<>();
 
     public TileAutoCrafter() {
     }
@@ -98,17 +121,27 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
     public void update() {
         if (world == null || world.isRemote) return;
 
+        if (automationSleepTimer > 0) {
+            automationSleepTimer--;
+        }
+
         tickCounter++;
         if (tickCounter >= CRAFT_INTERVAL) {
             tickCounter = 0;
 
-            // Proces craftowania z kolejki
+            // Proces craftowania z kolejki (ręczny zawsze ma priorytet)
             processCraftingQueue();
 
             // Automatyzacja - sprawdź czy można coś zrobić
-            if (automationEnabled) {
+            if (automationEnabled && automationSleepTimer <= 0) {
                 processAutomation();
             }
+        }
+
+        // OPTYMALIZACJA: Wyślij pakiet tylko raz na tick, jeśli coś się zmieniło
+        if (updateNeeded) {
+            updateNeeded = false;
+            sendUpdate();
         }
     }
 
@@ -130,7 +163,7 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
         if (tryCraft(recipe)) {
             craftingQueue.remove(0);
             markDirty();
-            sendUpdate(); // Odswiez stan kolejki u gracza
+            updateNeeded = true; // Odswiez stan kolejki u gracza
         }
     }
 
@@ -140,12 +173,15 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
     private void processAutomation() {
         if (automationRecipes.isEmpty()) return;
 
+        // OPTYMALIZACJA: Jeśli nic się nie zmieniło od ostatniej nieudanej próby, nie rób nic
+        if (!inventoryDirty && automationStuck) return;
+
         List<ItemStack> available = getAvailableItems();
+        boolean craftedAny = false;
 
         if (roundRobinMode) {
             // Tryb Cykliczny: Zaczynamy od ostatniego indeksu
             int size = automationRecipes.size();
-            boolean crafted = false;
 
             // Sprawdzamy wszystkie receptury zaczynajac od aktualnego indeksu
             for (int i = 0; i < size; i++) {
@@ -157,24 +193,34 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
                     if (tryCraft(recipe)) {
                         // Udalo sie - przesuwamy wskaznik na nastepna recepture
                         currentRoundRobinIndex = (checkIndex + 1) % size;
-                        crafted = true;
+                        craftedAny = true;
                         break; // Jeden craft na tick
                     }
                 }
             }
-
-            // Jesli nic nie udalo sie zrobic, nie przesuwamy indeksu (czekamy na surowce)
-            // Lub opcjonalnie: mozna przesunac, zeby sprawdzac inne next tick.
-            // W tym wariancie trzymamy sie "Round Robin" przy sukcesie.
         } else {
             // Tryb Priorytetowy: Zawsze od poczatku listy
             for (int recipeId : automationRecipes) {
                 CraftingRecipe recipe = getRecipeById(recipeId);
                 if (recipe != null && recipe.canCraft(available)) {
-                    tryCraft(recipe);
-                    break; // Jeden craft na tick
+                    if (tryCraft(recipe)) {
+                        craftedAny = true;
+                        break; // Jeden craft na tick
+                    }
                 }
             }
+        }
+
+        if (craftedAny) {
+            // Jeśli coś zcraftowaliśmy, onContentsChanged ustawi inventoryDirty=true i automationStuck=false
+            // Więc w następnym cyklu spróbujemy znowu.
+            inventoryDirty = false; // Reset flagi dirty (zostanie ustawiona na true przez executeCraft -> onContentsChanged)
+            automationSleepTimer = 0;
+        } else {
+            // Nic nie udało się zcraftować
+            automationStuck = true;
+            inventoryDirty = false;
+            automationSleepTimer = 40; // Odczekaj 2 sekundy przed ponownym skanowaniem wszystkich receptur
         }
     }
 
@@ -339,6 +385,20 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
     }
 
     /**
+     * Zlicza ile sztuk danego przedmiotu jest już w slocie wejściowym.
+     */
+    private int countItemsInInput(ItemStack stack) {
+        int count = 0;
+        for (int i = 0; i < inputInventory.getSlots(); i++) {
+            ItemStack inSlot = inputInventory.getStackInSlot(i);
+            if (!inSlot.isEmpty() && ItemHandlerHelper.canItemStacksStack(inSlot, stack)) {
+                count += inSlot.getCount();
+            }
+        }
+        return count;
+    }
+
+    /**
      * Wstawia przedmiot do slotów wejściowych (dla łańcuchowego craftowania).
      *
      * @return to co się nie zmieściło
@@ -382,16 +442,18 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
 
     /**
      * Zwraca listę dostępnych przedmiotów (z input inventory).
+     * UWAGA: Zwrócona lista jest reużywalna - nie modyfikuj jej!
      */
     public List<ItemStack> getAvailableItems() {
-        List<ItemStack> available = new ArrayList<>();
+        // OPTYMALIZACJA: Reużywaj listę zamiast tworzyć nową co wywołanie
+        reusableAvailableItems.clear();
         for (int i = 0; i < inputInventory.getSlots(); i++) {
             ItemStack stack = inputInventory.getStackInSlot(i);
             if (!stack.isEmpty()) {
-                available.add(stack.copy());
+                reusableAvailableItems.add(stack.copy());
             }
         }
-        return available;
+        return reusableAvailableItems;
     }
 
     // ========== Zarządzanie recepturami ==========
@@ -627,6 +689,30 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
         sendUpdate();
     }
 
+    private String getItemKey(ItemStack stack) {
+        if (stack.isEmpty()) return "";
+        return stack.getItem().getRegistryName().toString() + ":" + stack.getMetadata();
+    }
+
+    public void setItemLimit(ItemStack stack, int limit) {
+        if (stack.isEmpty()) return;
+        String key = getItemKey(stack);
+        if (limit < 0) {
+            itemLimits.remove(key);
+        } else {
+            itemLimits.put(key, limit);
+        }
+        markDirty();
+        sendUpdate();
+    }
+
+    public int getItemLimit(ItemStack stack) {
+        if (stack.isEmpty()) return 0;
+        String key = getItemKey(stack);
+        // Default limit is now MAX_VALUE (Infinite/Fill until full) instead of maxStackSize
+        return itemLimits.getOrDefault(key, Integer.MAX_VALUE);
+    }
+
     public ItemStack getRecipeResultPreview() {
         return recipeResultPreview;
     }
@@ -744,6 +830,17 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
         if (compound.hasKey("ResultPreview")) {
             recipeResultPreview = new ItemStack(compound.getCompoundTag("ResultPreview"));
         }
+
+        itemLimits.clear();
+        if (compound.hasKey("ItemLimits")) {
+            NBTTagList limitList = compound.getTagList("ItemLimits", Constants.NBT.TAG_COMPOUND);
+            for (int i = 0; i < limitList.tagCount(); i++) {
+                NBTTagCompound tag = limitList.getCompoundTagAt(i);
+                String key = tag.getString("Key");
+                int limit = tag.getInteger("Limit");
+                itemLimits.put(key, limit);
+            }
+        }
     }
 
     @Override
@@ -782,6 +879,15 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
         if (!recipeResultPreview.isEmpty()) {
             compound.setTag("ResultPreview", recipeResultPreview.writeToNBT(new NBTTagCompound()));
         }
+
+        NBTTagList limitList = new NBTTagList();
+        for (Map.Entry<String, Integer> entry : itemLimits.entrySet()) {
+            NBTTagCompound tag = new NBTTagCompound();
+            tag.setString("Key", entry.getKey());
+            tag.setInteger("Limit", entry.getValue());
+            limitList.appendTag(tag);
+        }
+        compound.setTag("ItemLimits", limitList);
 
         return compound;
     }
@@ -839,6 +945,34 @@ public class TileAutoCrafter extends TileEntity implements ITickable {
             if (shouldRejectFromPipes(stack)) {
                 return stack; // Zwróć stack - nie przyjmujemy
             }
+
+            // SMART INSERT: Limit items to prevent clogging
+            // If automation is enabled, limit each ingredient to configured limit (default: max stack size)
+            // This ensures one ingredient doesn't fill all slots, blocking others
+            if (automationEnabled && !automationRecipes.isEmpty() && isIngredientForAnyAutoRecipe(stack)) {
+                int currentCount = countItemsInInput(stack);
+                int limit = getItemLimit(stack); // Use configured limit
+
+                if (currentCount >= limit) {
+                    return stack; // Reject all if we have enough
+                }
+
+                int canAccept = limit - currentCount;
+                if (stack.getCount() > canAccept) {
+                    // Split: accept only up to limit
+                    ItemStack toInsert = stack.copy();
+                    toInsert.setCount(canAccept);
+                    ItemStack remainder = stack.copy();
+                    remainder.setCount(stack.getCount() - canAccept);
+
+                    ItemStack leftovers = ItemHandlerHelper.insertItemStacked(inputInventory, toInsert, simulate);
+                    if (!leftovers.isEmpty()) {
+                        remainder.grow(leftovers.getCount());
+                    }
+                    return remainder;
+                }
+            }
+
             // Wkładanie ZAWSZE trafia do input
             return ItemHandlerHelper.insertItemStacked(inputInventory, stack, simulate);
         }

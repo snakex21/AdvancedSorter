@@ -16,7 +16,7 @@ import org.apache.logging.log4j.Logger;
 public class AdvancedSorterMod {
     public static final String MODID = "advancedsorter";
     public static final String NAME = "Advanced Sorter";
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "2.1.0";
 
     // GUI IDs
     public static final int GUI_ADVANCED_SORTER = 0;
@@ -33,6 +33,25 @@ public class AdvancedSorterMod {
     public static final int GUI_TELEPORT_GAS_PIPE = 11;
     public static final int GUI_AUTO_CRAFTER = 12;
     public static final int GUI_ADVANCED_TANK = 13;
+    public static final int GUI_COBBLE_GENERATOR = 14;
+    public static final int GUI_CRUCIBLE = 15;
+    public static final int GUI_CRUSHER = 16;
+    public static final int GUI_WASHER = 17;
+    public static final int GUI_OBSIDIAN_GENERATOR = 18;
+    public static final int GUI_DECONSTRUCTOR = 19;
+    public static final int GUI_AUTO_REPAIRER = 20;
+    public static final int GUI_AMMO_PRESS = 21;
+    public static final int GUI_ATMOSPHERIC_STABILIZER = 22;
+    public static final int GUI_FLINT_MAKER = 23;
+    public static final int GUI_ENCHANTMENT_EXTRACTOR = 24;
+    public static final int GUI_XP_VACUUM = 25;
+    public static final int GUI_BLOCK_BREAKER = 26;
+    public static final int GUI_BLOCK_PLACER = 27;
+    public static final int GUI_MOB_GRINDER = 28;
+    public static final int GUI_TRASH_CAN = 29;
+    public static final int GUI_AUTO_FISHER = 30;
+    public static final int GUI_VOID_MINER = 31;
+    public static final int GUI_SMART_ROUTER = 32;
 
     // Creative Tab
     public static final CreativeTabs CREATIVE_TAB = new CreativeTabs(MODID) {

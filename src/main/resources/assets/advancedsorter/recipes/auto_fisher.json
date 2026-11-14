@@ -1,0 +1,19 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "FFF",
+        "WBW",
+        "PRP"
+    ],
+    "key": {
+        "F": { "item": "minecraft:fishing_rod" },
+        "W": { "item": "minecraft:water_bucket" },
+        "B": { "item": "minecraft:iron_block" },
+        "P": { "item": "minecraft:prismarine_shard" },
+        "R": { "item": "minecraft:redstone" }
+    },
+    "result": {
+        "item": "advancedsorter:auto_fisher",
+        "count": 1
+    }
+}

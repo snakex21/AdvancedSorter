@@ -1,0 +1,8 @@
+{
+  "parent": "block/cube_bottom_top",
+  "textures": {
+    "top": "advancedsorter:blocks/obsidian_generator/top",
+    "bottom": "advancedsorter:blocks/obsidian_generator/bottom",
+    "side": "advancedsorter:blocks/obsidian_generator/side"
+  }
+}

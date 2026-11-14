@@ -1,0 +1,8 @@
+{
+  "parent": "block/orientable",
+  "textures": {
+    "top": "blocks/water_still",
+    "front": "blocks/dispenser_front_horizontal",
+    "side": "blocks/prismarine_bricks"
+  }
+}

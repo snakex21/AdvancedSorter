@@ -1,0 +1,35 @@
+{
+    "type": "forge:ore_shaped",
+    "pattern": [
+        "DGD",
+        "TCT",
+        "IBI"
+    ],
+    "key": {
+        "D": {
+            "type": "forge:ore_dict",
+            "ore": "gemDiamond"
+        },
+        "G": {
+            "type": "forge:ore_dict",
+            "ore": "blockGlass"
+        },
+        "T": {
+            "item": "advancedsorter:fluid_tank"
+        },
+        "C": {
+            "item": "advancedsorter:universal_charger"
+        },
+        "I": {
+            "type": "forge:ore_dict",
+            "ore": "ingotIron"
+        },
+        "B": {
+            "type": "forge:ore_dict",
+            "ore": "blockIron"
+        }
+    },
+    "result": {
+        "item": "advancedsorter:atmospheric_stabilizer"
+    }
+}

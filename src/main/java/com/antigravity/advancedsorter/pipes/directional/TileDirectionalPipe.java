@@ -67,6 +67,9 @@ public class TileDirectionalPipe extends TileItemPipe {
     // Track if we have any INPUT side assigned (for auto-logic)
     private boolean hasAutoInput = false;
 
+    // OPTYMALIZACJA: Reużywalna lista dla chooseOutputDirection
+    private final List<EnumFacing> reusableOutputSides = new ArrayList<>();
+
     public TileDirectionalPipe() {
         // Default: all sides disabled
         for (EnumFacing face : EnumFacing.VALUES) {
@@ -174,7 +177,7 @@ public class TileDirectionalPipe extends TileItemPipe {
     @Override
     protected EnumFacing chooseOutputDirection(TravellingItem item) {
         // Only consider OUTPUT sides
-        List<EnumFacing> outputSides = new ArrayList<>();
+        reusableOutputSides.clear();
 
         for (EnumFacing face : connections) {
             if (face == item.source)
@@ -182,22 +185,22 @@ public class TileDirectionalPipe extends TileItemPipe {
 
             SideMode mode = getSideMode(face);
             if (mode == SideMode.OUTPUT && canOutputTo(face)) {
-                outputSides.add(face);
+                reusableOutputSides.add(face);
             }
         }
 
-        if (outputSides.isEmpty()) {
+        if (reusableOutputSides.isEmpty()) {
             return null;
         }
 
-        if (outputSides.size() == 1) {
-            return outputSides.get(0);
+        if (reusableOutputSides.size() == 1) {
+            return reusableOutputSides.get(0);
         }
 
         // Round-robin among outputs
-        roundRobinIndex = roundRobinIndex % outputSides.size();
-        EnumFacing selected = outputSides.get(roundRobinIndex);
-        roundRobinIndex = (roundRobinIndex + 1) % outputSides.size();
+        roundRobinIndex = roundRobinIndex % reusableOutputSides.size();
+        EnumFacing selected = reusableOutputSides.get(roundRobinIndex);
+        roundRobinIndex = (roundRobinIndex + 1) % reusableOutputSides.size();
         return selected;
     }
 

@@ -1,0 +1,8 @@
+{
+  "parent": "block/orientable",
+  "textures": {
+    "top": "blocks/iron_block",
+    "front": "blocks/anvil_base",
+    "side": "blocks/iron_block"
+  }
+}

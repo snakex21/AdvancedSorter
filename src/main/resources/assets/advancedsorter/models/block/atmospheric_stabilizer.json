@@ -1,0 +1,8 @@
+{
+  "parent": "block/cube_bottom_top",
+  "textures": {
+    "top": "advancedsorter:blocks/atmospheric_stabilizer/top",
+    "bottom": "advancedsorter:blocks/atmospheric_stabilizer/bottom",
+    "side": "advancedsorter:blocks/atmospheric_stabilizer/side"
+  }
+}

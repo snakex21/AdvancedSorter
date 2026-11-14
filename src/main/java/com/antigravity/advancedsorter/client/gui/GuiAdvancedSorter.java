@@ -73,11 +73,11 @@ public class GuiAdvancedSorter extends GuiContainer
         this.buttonList.add(new GuiButton(1, i + 58, j + 100, 50, 20, "Delete"));
 
         // Buttons (Right Side - Rule Editing) - moved up for Items visibility
-        this.buttonList.add(new GuiButton(2, i + 120, j + 70, 50, 20, "Save"));
-        this.buttonList.add(new GuiButton(3, i + 120, j + 20, 60, 20, "Type"));
-        this.buttonList.add(new GuiButton(4, i + 190, j + 20, 60, 20, "Face"));
-        this.buttonList.add(new GuiButton(5, i + 120, j + 45, 60, 20, "Mode"));
-        this.buttonList.add(new GuiButton(6, i + 190, j + 45, 60, 20, "Search"));
+        this.buttonList.add(new GuiButton(2, i + 130, j + 70, 50, 20, "Save"));
+        this.buttonList.add(new GuiButton(3, i + 130, j + 20, 60, 20, "Type"));
+        this.buttonList.add(new GuiButton(4, i + 200, j + 20, 60, 20, "Face"));
+        this.buttonList.add(new GuiButton(5, i + 130, j + 45, 60, 20, "Mode"));
+        this.buttonList.add(new GuiButton(6, i + 200, j + 45, 60, 20, "Search"));
 
         // Default Side button - for items that don't match any filter
         this.buttonList
@@ -88,7 +88,7 @@ public class GuiAdvancedSorter extends GuiContainer
                 : "Mode: 1st";
         this.buttonList.add(new GuiButton(8, i + 8, j + 145, 100, 15, globalModeText));
 
-        valueField = new GuiTextField(8, this.fontRenderer, i + 120, j + -5, 120, 20);
+        valueField = new GuiTextField(8, this.fontRenderer, i + 130, j + -5, 120, 20);
         valueField.setMaxStringLength(32767);
     }
 
@@ -329,7 +329,7 @@ public class GuiAdvancedSorter extends GuiContainer
             List<ItemStack> targetList = editingExceptions ? rule.exceptionItems : rule.exactItems;
 
             for (int slot = 0; slot < 3; slot++) {
-                int x = guiLeft + 175 + slot * 18;
+                int x = guiLeft + 185 + slot * 18;
                 int y = guiTop + 85;
                 if (mouseX >= x && mouseX < x + 18 && mouseY >= y && mouseY < y + 18) {
                     if (mouseButton == 1) {
@@ -349,7 +349,7 @@ public class GuiAdvancedSorter extends GuiContainer
 
             // "+" button click - toggle expanded panel
             if (targetList.size() >= 3) {
-                int plusX = guiLeft + 175 + 3 * 18;
+                int plusX = guiLeft + 185 + 3 * 18;
                 int plusY = guiTop + 85;
                 if (mouseX >= plusX && mouseX < plusX + 18 && mouseY >= plusY && mouseY < plusY + 18) {
                     showExpandedItemsPanel = !showExpandedItemsPanel;
@@ -515,8 +515,8 @@ public class GuiAdvancedSorter extends GuiContainer
 
         // Draw Right Panel Background (extended up more to fit Type and Face on
         // separate lines)
-        drawRect(guiLeft + 110, guiTop - 40, guiLeft + 250, guiTop + 110, 0xFF444444);
-        drawRect(guiLeft + 111, guiTop - 39, guiLeft + 249, guiTop + 109, 0xFFC6C6C6);
+        drawRect(guiLeft + 120, guiTop - 40, guiLeft + 260, guiTop + 110, 0xFF444444);
+        drawRect(guiLeft + 121, guiTop - 39, guiLeft + 259, guiTop + 109, 0xFFC6C6C6);
 
         if (selectedRuleIndex >= 0 && selectedRuleIndex < tile.rules.size()) {
             SortRule rule = tile.rules.get(selectedRuleIndex);
@@ -524,16 +524,16 @@ public class GuiAdvancedSorter extends GuiContainer
             valueField.drawTextBox();
 
             // Type and Face on separate lines so long type names don't overlap
-            this.fontRenderer.drawString("Type: " + rule.type.name(), guiLeft + 115, guiTop - 32, 0x404040);
-            this.fontRenderer.drawString("Face: " + rule.outputFace.getName(), guiLeft + 115, guiTop - 22, 0x404040);
+            this.fontRenderer.drawString("Type: " + rule.type.name(), guiLeft + 125, guiTop - 32, 0x404040);
+            this.fontRenderer.drawString("Face: " + rule.outputFace.getName(), guiLeft + 125, guiTop - 22, 0x404040);
 
             List<ItemStack> targetList = editingExceptions ? rule.exceptionItems : rule.exactItems;
-            this.fontRenderer.drawString(editingExceptions ? "Exceptions:" : "Items:", guiLeft + 175, guiTop + 75,
+            this.fontRenderer.drawString(editingExceptions ? "Exceptions:" : "Items:", guiLeft + 185, guiTop + 75,
                     0x404040);
 
             // Draw 3 visible ghost slots
             for (int slot = 0; slot < 3; slot++) {
-                int x = guiLeft + 175 + slot * 18;
+                int x = guiLeft + 185 + slot * 18;
                 int y = guiTop + 85;
                 drawRect(x, y, x + 18, y + 18, 0xFF888888);
 
@@ -548,7 +548,7 @@ public class GuiAdvancedSorter extends GuiContainer
 
             // Draw "+" button and "+X" counter (only when we have items)
             if (targetList.size() >= 3) {
-                int plusX = guiLeft + 175 + 3 * 18;
+                int plusX = guiLeft + 185 + 3 * 18;
                 int plusY = guiTop + 85;
                 int plusBgColor = 0xFF666699;
 
@@ -563,11 +563,11 @@ public class GuiAdvancedSorter extends GuiContainer
                 }
             }
         } else {
-            this.drawCenteredString(this.fontRenderer, "Select a Filter", guiLeft + 180, guiTop + 5, 0xFFFFFF);
+            this.drawCenteredString(this.fontRenderer, "Select a Filter", guiLeft + 190, guiTop + 5, 0xFFFFFF);
         }
 
         // Draw Connection Status Panel (far right side, separate from buttons)
-        int connX = guiLeft + 260;
+        int connX = guiLeft + 270;
         int connY = guiTop + 10;
 
         // Draw a small background panel for connections

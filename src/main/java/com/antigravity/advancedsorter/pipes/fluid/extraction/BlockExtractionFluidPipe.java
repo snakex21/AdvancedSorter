@@ -3,6 +3,7 @@ package com.antigravity.advancedsorter.pipes.fluid.extraction;
 import com.antigravity.advancedsorter.AdvancedSorterMod;
 import com.antigravity.advancedsorter.pipes.fluid.BlockFluidPipe;
 import com.antigravity.advancedsorter.pipes.fluid.FluidPipeTier;
+import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
@@ -48,5 +49,17 @@ public class BlockExtractionFluidPipe extends BlockFluidPipe {
             }
         }
         return true;
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
+        super.neighborChanged(state, worldIn, pos, blockIn, fromPos);
+        if (!worldIn.isRemote) {
+            TileEntity te = worldIn.getTileEntity(pos);
+            if (te instanceof TileExtractionFluidPipe) {
+                ((TileExtractionFluidPipe) te).onNeighborChanged();
+            }
+        }
     }
 }

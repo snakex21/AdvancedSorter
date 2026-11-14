@@ -75,3 +75,89 @@ tile.advancedsorter.fluid_tank_elite.name=Elite Fluid Tank
 tile.advancedsorter.fluid_tank_ultimate.name=Ultimate Fluid Tank
 tooltip.advancedsorter.fluid_tank.desc=Stores and distributes fluids
 tooltip.advancedsorter.fluid_tank.details=Configure sides as Input/Output. Auto-outputs to connected pipes/tanks.
+
+tile.advancedsorter.cobble_generator.name=Cobblestone Generator
+tile.advancedsorter.crucible.name=Crucible
+tile.advancedsorter.crusher.name=Crusher
+tile.advancedsorter.washer.name=Washer
+tile.advancedsorter.obsidian_generator.name=Obsidian Generator
+tile.advancedsorter.universal_charger.name=Universal Charger Plate
+tile.advancedsorter.deconstructor.name=De-constructor
+tile.advancedsorter.auto_repairer.name=Auto Repairer
+tile.advancedsorter.ammo_press.name=Ammo Press
+tile.advancedsorter.atmospheric_stabilizer.name=Atmospheric Stabilizer
+tile.advancedsorter.energy_converter.name=Energy Converter
+tile.advancedsorter.flint_maker.name=Flint Maker
+tile.advancedsorter.enchantment_extractor.name=Enchantment Extractor
+tile.advancedsorter.xp_vacuum.name=XP Vacuum
+tile.advancedsorter.block_breaker.name=Block Breaker
+tile.advancedsorter.block_placer.name=Block Placer
+tile.advancedsorter.mob_grinder.name=Mob Grinder
+tile.advancedsorter.trash_can.name=Trash Can
+tile.advancedsorter.auto_fisher.name=Auto Fisher
+tile.advancedsorter.void_miner.name=Void Miner
+
+# Machine Tooltips
+tooltip.advancedsorter.cobble_generator.desc=Generates cobblestone automatically
+tooltip.advancedsorter.cobble_generator.details=Requires water and lava. Produces cobblestone for your automation needs.
+
+tooltip.advancedsorter.crucible.desc=Melts cobblestone into lava
+tooltip.advancedsorter.crucible.details=Consumes 1000 RF per cobblestone. 4 cobblestones = 1 bucket of lava.
+
+tooltip.advancedsorter.crusher.desc=Crushes materials
+tooltip.advancedsorter.crusher.details=Doubles ore output. Crushes Cobblestone to Gravel, and Gravel to Sand.
+
+tooltip.advancedsorter.washer.desc=Washes sand and concrete powder
+tooltip.advancedsorter.washer.details=Converts Sand to Clay, Concrete Powder to Concrete. Uses 200 RF and 250mB water per operation.
+
+tooltip.advancedsorter.obsidian_generator.desc=Generates obsidian automatically
+tooltip.advancedsorter.obsidian_generator.details=Requires water and lava. Produces obsidian safely.
+
+tooltip.advancedsorter.universal_charger.desc=Charges items in player inventory
+tooltip.advancedsorter.universal_charger.details=Stand on it to charge energy items. Supports RF/FE, Mekanism Joules, fluids and gases.
+
+tooltip.advancedsorter.deconstructor.desc=Breaks down items into components
+tooltip.advancedsorter.deconstructor.details=Reverse-crafts items back to their ingredients.
+
+tooltip.advancedsorter.auto_repairer.desc=Automatically repairs damaged items
+tooltip.advancedsorter.auto_repairer.details=Uses RF energy to repair tools and armor.
+
+tooltip.advancedsorter.ammo_press.desc=Crafts ammunition for Immersive Engineering
+tooltip.advancedsorter.ammo_press.details=Automates bullet crafting. Requires IE installed.
+
+tooltip.advancedsorter.atmospheric_stabilizer.desc=Stabilizes weather and time
+tooltip.advancedsorter.atmospheric_stabilizer.details=Controls weather conditions in the area. High energy consumption.
+
+tooltip.advancedsorter.energy_converter.desc=Converts energy between different systems
+tooltip.advancedsorter.energy_converter.details=Lossless conversion: RF/FE, Mekanism Joules, IC2 EU. 1 RF = 2.5 J = 0.25 EU.
+
+tile.smart_router.name=Smart Router
+tooltip.advancedsorter.smart_router.desc=Routes items based on frequency rules
+tooltip.advancedsorter.smart_router.details=Define specific frequencies for specific items. Non-matching items stay in buffer.
+
+tooltip.advancedsorter.flint_maker.desc=Turns Gravel into Flint
+tooltip.advancedsorter.flint_maker.details=Consumes 400 RF to convert Gravel into Flint efficiently.
+
+tooltip.advancedsorter.enchantment_extractor.desc=Extracts enchantments from items
+tooltip.advancedsorter.enchantment_extractor.details=Moves enchantments from tools/armor onto Books.
+
+tooltip.advancedsorter.xp_vacuum.desc=Collects XP orbs from the area
+tooltip.advancedsorter.xp_vacuum.details=Sucks up experience orbs in a wide radius and stores liquid XP.
+
+tooltip.advancedsorter.block_breaker.desc=Breaks blocks in front of it
+tooltip.advancedsorter.block_breaker.details=Simulates a pickaxe breaking the block. Supports fortune/silk touch via upgrades.
+
+tooltip.advancedsorter.block_placer.desc=Places blocks
+tooltip.advancedsorter.block_placer.details=Places blocks from its inventory into the world.
+
+tooltip.advancedsorter.mob_grinder.desc=Kills mobs in front
+tooltip.advancedsorter.mob_grinder.details=Deals damage to mobs in a specific area and collects the drops.
+
+tooltip.advancedsorter.trash_can.desc=Voids items, fluids, and energy
+tooltip.advancedsorter.trash_can.details=Permanently deletes anything inserted into it. Useful for overflow management.
+
+tooltip.advancedsorter.auto_fisher.desc=Automatically catches fish
+tooltip.advancedsorter.auto_fisher.details=Requires water source and energy. Generates fish and treasure.
+
+tooltip.advancedsorter.void_miner.desc=Generates ores from nothing
+tooltip.advancedsorter.void_miner.details=Uses massive amounts of energy (1000 RF/t) to generate ores from the void.

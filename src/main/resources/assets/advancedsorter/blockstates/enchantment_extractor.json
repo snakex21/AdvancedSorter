@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "advancedsorter:enchantment_extractor" },
+    "facing=south": { "model": "advancedsorter:enchantment_extractor", "y": 180 },
+    "facing=west":  { "model": "advancedsorter:enchantment_extractor", "y": 270 },
+    "facing=east":  { "model": "advancedsorter:enchantment_extractor", "y": 90 }
+  }
+}

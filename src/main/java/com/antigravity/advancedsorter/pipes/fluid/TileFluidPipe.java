@@ -27,6 +27,13 @@ public class TileFluidPipe extends TileEntity implements ITickable, IFluidSyncab
     protected final Set<EnumFacing> connections = EnumSet.noneOf(EnumFacing.class);
     protected final Set<EnumFacing> blockedConnections = EnumSet.noneOf(EnumFacing.class);
     protected boolean connectionsDirty = true;
+
+    // OPTYMALIZACJA: Cache handlerów sąsiadów
+    protected final java.util.Map<EnumFacing, IFluidHandler> neighborCache = new java.util.EnumMap<>(EnumFacing.class);
+
+    // OPTYMALIZACJA: Sleep timer dla dystrybucji jeśli nie udało się przesłać
+    protected int sleepTimer = 0;
+
     protected boolean syncRequested = false;
     protected int syncCooldown = 0;
 
@@ -47,11 +54,23 @@ public class TileFluidPipe extends TileEntity implements ITickable, IFluidSyncab
         if (connectionsDirty) {
             updateConnections();
             connectionsDirty = false;
+            sleepTimer = 0; // Reset sleep on topology change
         }
 
-        // Transfer fluid to neighbors
-        if (tank.getFluidAmount() > 0) {
-            distributeFluid();
+        // Handle sleep
+        if (sleepTimer > 0) {
+            sleepTimer--;
+        } else {
+            // Transfer fluid to neighbors
+            if (tank.getFluidAmount() > 0) {
+                if (!distributeFluid()) {
+                    // If failed to distribute anything, sleep briefly to avoid lag
+                    sleepTimer = 10;
+                }
+            } else {
+                // Empty tank, sleep longer
+                sleepTimer = 20;
+            }
         }
 
         // Handle sync request from tank with rate limiting (every 10 ticks)
@@ -84,15 +103,20 @@ public class TileFluidPipe extends TileEntity implements ITickable, IFluidSyncab
     }
 
     protected void updateConnections() {
+        // Save old state to check for changes
+        Set<EnumFacing> oldConnections = EnumSet.copyOf(connections);
+
         connections.clear();
+        neighborCache.clear();
+
         for (EnumFacing face : EnumFacing.VALUES) {
             if (blockedConnections.contains(face))
                 continue;
 
-            if (canConnectTo(face)) {
+            TileEntity neighbor = world.getTileEntity(pos.offset(face));
+
+            if (canConnectToNeighbor(face, neighbor)) {
                 // Also check if neighbor has blocked us
-                BlockPos neighborPos = pos.offset(face);
-                TileEntity neighbor = world.getTileEntity(neighborPos);
                 if (neighbor instanceof TileFluidPipe) {
                     TileFluidPipe neighborPipe = (TileFluidPipe) neighbor;
                     if (neighborPipe.blockedConnections.contains(face.getOpposite())) {
@@ -100,14 +124,25 @@ public class TileFluidPipe extends TileEntity implements ITickable, IFluidSyncab
                     }
                 }
                 connections.add(face);
+
+                // Cache handler
+                if (neighbor != null) {
+                    IFluidHandler handler = neighbor.getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY, face.getOpposite());
+                    if (handler != null) {
+                        neighborCache.put(face, handler);
+                    }
+                }
             }
         }
-        markDirty();
-        sendUpdate();
+
+        // OPTYMALIZACJA: Tylko wysyłaj update jeśli topologia faktycznie się zmieniła
+        if (!connections.equals(oldConnections)) {
+            markDirty();
+            sendUpdate();
+        }
     }
 
-    protected boolean canConnectTo(EnumFacing face) {
-        TileEntity neighbor = world.getTileEntity(pos.offset(face));
+    private boolean canConnectToNeighbor(EnumFacing face, TileEntity neighbor) {
         if (neighbor == null)
             return false;
 
@@ -119,37 +154,69 @@ public class TileFluidPipe extends TileEntity implements ITickable, IFluidSyncab
         return neighbor.hasCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY, face.getOpposite());
     }
 
-    protected void distributeFluid() {
-        if (connections.isEmpty())
-            return;
+    protected boolean canConnectTo(EnumFacing face) {
+        TileEntity neighbor = world.getTileEntity(pos.offset(face));
+        return canConnectToNeighbor(face, neighbor);
+    }
 
-        int amountPerSide = Math.min(tank.getFluidAmount(), tier.getTransferRate()) / connections.size();
-        if (amountPerSide <= 0)
-            return;
+    // OPTYMALIZACJA: Kursor Round-Robin dla dystrybucji płynów
+    private int distributionCursor = 0;
+
+    protected boolean distributeFluid() {
+        if (connections.isEmpty())
+            return false;
+
+        int totalToTransfer = Math.min(tank.getFluidAmount(), tier.getTransferRate());
+        if (totalToTransfer <= 0)
+            return false;
+
+        // Konwersja na listę dla dostępu po indeksie
+        // Cache this list usually, but connections change rarely
+        java.util.List<EnumFacing> faces = new java.util.ArrayList<>(connections);
+        if (faces.isEmpty()) return false;
 
         boolean transferred = false;
-        for (EnumFacing face : connections) {
-            TileEntity neighbor = world.getTileEntity(pos.offset(face));
-            if (neighbor == null)
-                continue;
+        int startFace = distributionCursor % faces.size();
+        int facesChecked = 0;
 
-            IFluidHandler handler = neighbor.getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY,
-                    face.getOpposite());
+        while (facesChecked < faces.size() && totalToTransfer > 0) {
+            int idx = (startFace + facesChecked) % faces.size();
+            EnumFacing face = faces.get(idx);
+
+            // OPTYMALIZACJA: Użyj cache
+            IFluidHandler handler = neighborCache.get(face);
+
+            // Fallback
+            if (handler == null) {
+                 TileEntity neighbor = world.getTileEntity(pos.offset(face));
+                 if (neighbor != null) {
+                     handler = neighbor.getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY, face.getOpposite());
+                 }
+            }
+
             if (handler != null) {
-                FluidStack toTransfer = tank.drain(amountPerSide, false);
-                if (toTransfer != null && toTransfer.amount > 0) {
-                    int filled = handler.fill(toTransfer, true);
+                // Próbuj wysłać wszystko co możemy w tym ticku
+                FluidStack fluidToOffer = tank.drain(totalToTransfer, false);
+                if (fluidToOffer != null) {
+                    int filled = handler.fill(fluidToOffer, true);
                     if (filled > 0) {
                         tank.drain(filled, true);
+                        totalToTransfer -= filled;
                         transferred = true;
                     }
                 }
             }
+            facesChecked++;
         }
+
+        // Aktualizuj kursor - zacznij od następnego w kolejnym ticku
+        distributionCursor = (startFace + 1) % faces.size();
+
         if (transferred) {
             markDirty();
-            sendUpdate(); // Sync fluid level to client for rendering
+            requestClientSync();
         }
+        return transferred;
     }
 
     public void markConnectionsDirty() {
@@ -198,6 +265,7 @@ public class TileFluidPipe extends TileEntity implements ITickable, IFluidSyncab
             }
         }
 
+        markConnectionsDirty(); // Ważne: Odśwież cache po zmianie ręcznej
         markDirty();
         sendUpdate();
     }

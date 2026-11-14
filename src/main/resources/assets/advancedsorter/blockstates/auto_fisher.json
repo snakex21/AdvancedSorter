@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "advancedsorter:auto_fisher" },
+    "facing=south": { "model": "advancedsorter:auto_fisher", "y": 180 },
+    "facing=west":  { "model": "advancedsorter:auto_fisher", "y": 270 },
+    "facing=east":  { "model": "advancedsorter:auto_fisher", "y": 90 }
+  }
+}

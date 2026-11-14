@@ -75,3 +75,49 @@ tile.advancedsorter.fluid_tank_elite.name=Elitarny Zbiornik
 tile.advancedsorter.fluid_tank_ultimate.name=Ostateczny Zbiornik
 tooltip.advancedsorter.fluid_tank.desc=Przechowuje i dystrybuuje plyny
 tooltip.advancedsorter.fluid_tank.details=Konfiguruj strony jako Wejscie/Wyjscie. Automatycznie wypycha do polaczonych rur/zbiornikow.
+
+tile.advancedsorter.cobble_generator.name=Generator Bruku
+tile.advancedsorter.crucible.name=Tygiel
+tile.advancedsorter.crusher.name=Kruszarka
+tile.advancedsorter.washer.name=Płuczka
+tile.advancedsorter.obsidian_generator.name=Generator Obsydianu
+tile.advancedsorter.universal_charger.name=Uniwersalna Płyta Ładująca
+tile.advancedsorter.deconstructor.name=De-konstruktor
+tile.advancedsorter.auto_repairer.name=Automatyczna Naprawiarka
+tile.advancedsorter.ammo_press.name=Prasa do Amunicji
+tile.advancedsorter.atmospheric_stabilizer.name=Stabilizator Atmosferyczny
+tile.advancedsorter.energy_converter.name=Konwerter Energii
+
+# Tooltips maszyn
+tooltip.advancedsorter.cobble_generator.desc=Automatycznie generuje bruk
+tooltip.advancedsorter.cobble_generator.details=Wymaga wody i lawy. Produkuje bruk dla twojej automatyzacji.
+
+tooltip.advancedsorter.crucible.desc=Topi bruk w lawę
+tooltip.advancedsorter.crucible.details=Zużywa 1000 RF na bruk. 4 bruki = 1 wiadro lawy.
+
+tooltip.advancedsorter.crusher.desc=Kruszy rudy w proszki
+tooltip.advancedsorter.crusher.details=Podwaja wydajność rud. Działa z większością rud z modów.
+
+tooltip.advancedsorter.washer.desc=Myje piasek i betonowy proszek
+tooltip.advancedsorter.washer.details=Zamienia Piasek w Glinę, Betonowy Proszek w Beton. Zużywa 200 RF i 250mB wody na operację.
+
+tooltip.advancedsorter.obsidian_generator.desc=Automatycznie generuje obsydian
+tooltip.advancedsorter.obsidian_generator.details=Wymaga wody i lawy. Bezpiecznie produkuje obsydian.
+
+tooltip.advancedsorter.universal_charger.desc=Ładuje przedmioty w ekwipunku gracza
+tooltip.advancedsorter.universal_charger.details=Stań na niej, aby naładować przedmioty energetyczne. Obsługuje RF/FE, Mekanism Joule, płyny i gazy.
+
+tooltip.advancedsorter.deconstructor.desc=Rozkłada przedmioty na komponenty
+tooltip.advancedsorter.deconstructor.details=Odwraca craftowanie przedmiotów do ich składników.
+
+tooltip.advancedsorter.auto_repairer.desc=Automatycznie naprawia uszkodzone przedmioty
+tooltip.advancedsorter.auto_repairer.details=Używa energii RF do naprawy narzędzi i zbroi.
+
+tooltip.advancedsorter.ammo_press.desc=Craftuje amunicję dla Immersive Engineering
+tooltip.advancedsorter.ammo_press.details=Automatyzuje produkcję pocisków. Wymaga zainstalowanego IE.
+
+tooltip.advancedsorter.atmospheric_stabilizer.desc=Stabilizuje pogodę i czas
+tooltip.advancedsorter.atmospheric_stabilizer.details=Kontroluje warunki pogodowe w okolicy. Wysokie zużycie energii.
+
+tooltip.advancedsorter.energy_converter.desc=Konwertuje energię między różnymi systemami
+tooltip.advancedsorter.energy_converter.details=Bezstratna konwersja: RF/FE, Mekanism Joule, IC2 EU. 1 RF = 2.5 J = 0.25 EU.
